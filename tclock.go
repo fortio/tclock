@@ -73,7 +73,7 @@ const (
 
 
 
- ::
+::
 
 
 `
@@ -93,7 +93,7 @@ func InitNumberLines() {
 	for i := range NumberLines {
 		extra := 1
 		if i >= 10*(Height+1) {
-			extra = 0 // no trailing space for colon
+			extra = -1 // no trailing space for colon
 		}
 		NumberLines[i] = AddTrailingSpaces(NumberLines[i], extra)
 	}
