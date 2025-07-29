@@ -25,7 +25,7 @@ func main() {
 	cli.MaxArgs = 1
 	cli.ArgsHelp = " [digits:digits...] or current time"
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
-	fSeconds := flag.Bool("seconds", false, "Show seconds (default is minutes only)")
+	fSeconds := flag.Bool("s", false, "Show seconds (default is minutes only)")
 	cli.Main()
 	var numStr string
 	if flag.NArg() == 1 {
