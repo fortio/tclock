@@ -40,10 +40,8 @@ func main() {
 		format = "15:04"
 	}
 	seconds := !*fNoSeconds
-	hoffset := bignum.Width + 2
 	if seconds {
 		format += ":05"
-		hoffset = 0
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	err := ap.Open()
@@ -85,9 +83,20 @@ func main() {
 			if frame%2 == 0 {
 				what = ".."
 			}
+			// The modulo to adjust what centered box does is rather ugly.
+			// we probably should place the clock ourselves and remember where the ::s are.
+			hoffset := bignum.Width + 2 + (1 - ap.W%2)
+			if seconds {
+				hoffset = 0
+			}
+			// before 10:00:00 one less digit so adjust where we find the ::
+			log.LogVf("numStr %q len %d", numStr, len(numStr))
+			if len(numStr) == 7 || len(numStr) == 4 {
+				hoffset += bignum.Width/2 + (1 - ap.W%2)
+			}
 			ap.WriteAtStr(ap.W/2+bignum.Width+1-hoffset, ap.H/2-bignum.Height/2+2, what)
 			if seconds {
-				ap.WriteAtStr(ap.W/2-2*bignum.Width, ap.H/2-bignum.Height/2+2, what)
+				ap.WriteAtStr(ap.W/2-2*bignum.Width-hoffset, ap.H/2-bignum.Height/2+2, what)
 			}
 		}
 		ap.EndSyncMode()
