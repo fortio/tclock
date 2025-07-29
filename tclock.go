@@ -64,8 +64,8 @@ func main() {
 		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev, false))
 		return nil
 	}
+	blinkEnabled := !*fNoBlink
 	blink := false
-	doBlink := !*fNoBlink
 	for {
 		doDraw := false
 		now := time.Now()
@@ -75,7 +75,7 @@ func main() {
 		}
 		prev = numStr
 		now = now.Truncate(time.Second) // change only when seconds change
-		if now != prevNow && doBlink {
+		if now != prevNow && blinkEnabled {
 			blink = !blink
 			doDraw = true
 		}
