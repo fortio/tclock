@@ -65,7 +65,7 @@ func main() {
 	prev := ""
 	ap.OnResize = func() error {
 		ap.ClearScreen()
-		ap.WriteBoxed(ap.H/2-bignum.Height/2, TimeString(prev))
+		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev))
 		return nil
 	}
 	for {
@@ -73,7 +73,7 @@ func main() {
 		now := time.Now()
 		numStr = now.Format(format)
 		if numStr != prev {
-			ap.WriteBoxed(ap.H/2-bignum.Height/2, TimeString(numStr))
+			ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(numStr))
 		}
 		prev = numStr
 		now = now.Truncate(time.Second) // change only when seconds change
@@ -89,7 +89,6 @@ func main() {
 			if seconds {
 				ap.WriteAtStr(ap.W/2-2*bignum.Width, ap.H/2-bignum.Height/2+2, what)
 			}
-
 		}
 		ap.EndSyncMode()
 		_, err := ap.ReadOrResizeOrSignalOnce()
