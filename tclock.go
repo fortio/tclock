@@ -58,7 +58,7 @@ func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
 	for i, line := range lines {
 		ap.WriteAtStr(x-width, y-height+i, line)
 	}
-	//ap.MoveCursor(x-1, y-1)
+	// ap.MoveCursor(x-1, y-1)
 }
 
 func main() {
