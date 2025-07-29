@@ -61,7 +61,7 @@ func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
 	// ap.MoveCursor(x-1, y-1)
 }
 
-func main() {
+func main() { //nolint:funlen // we could split the flags and rest.
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
 	cli.ArgsHelp = " [digits:digits...] or current time"
