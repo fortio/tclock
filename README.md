@@ -32,18 +32,25 @@ tclock help
 ```
 ```
 flags:
-  -24   Use 24-hour time format
-  -s    Show seconds (default is minutes only)
+  -24
+         Use 24-hour time format
+  -no-blink
+         Don't blink the colon
+  -no-seconds
+         Don't show seconds
 ```
 
 ```sh
-$ tclock -s -24
+$ tclock
 ```
 
 ```
- ━━   ━━           ━━      ━━   ━━
-   ┃ ┃  ┃    ┃  ┃    ┃       ┃ ┃
- ━━       ::  ━━   ━━  ::  ━━   ━━
-┃    ┃  ┃       ┃ ┃          ┃    ┃
- ━━   ━━           ━━      ━━   ━━
+         ╭────────────────────────────────────╮
+         │      ━━      ━━   ━━      ━━   ━━  │
+         │   ┃ ┃  ┃       ┃    ┃    ┃  ┃    ┃ │
+         │          ::  ━━   ━━  ::           │
+         │   ┃ ┃  ┃    ┃       ┃    ┃  ┃    ┃ │
+         │      ━━      ━━   ━━      ━━       │
+         ╰────────────────────────────────────╯
+
 ```
