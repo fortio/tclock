@@ -81,9 +81,7 @@ const (
 	Width  = 4
 )
 
-var (
-	NumberLines []string
-)
+var NumberLines []string
 
 func AddTrailingSpaces(s string, extra int) string {
 	s += strings.Repeat(" ", Width+extra-utf8.RuneCountInString(s))
