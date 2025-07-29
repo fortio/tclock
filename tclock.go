@@ -85,15 +85,19 @@ var (
 	NumberLines []string
 )
 
-func AddTrailingSpaces(s string) string {
-	s += strings.Repeat(" ", Width+1-utf8.RuneCountInString(s))
+func AddTrailingSpaces(s string, extra int) string {
+	s += strings.Repeat(" ", Width+extra-utf8.RuneCountInString(s))
 	return s
 }
 
 func InitNumberLines() {
 	NumberLines = strings.Split(Numbers, "\n")[1:]
 	for i := range NumberLines {
-		NumberLines[i] = AddTrailingSpaces(NumberLines[i])
+		extra := 1
+		if i >= 10*(Height+1) {
+			extra = 0 // no trailing space for colon
+		}
+		NumberLines[i] = AddTrailingSpaces(NumberLines[i], extra)
 	}
 }
 
