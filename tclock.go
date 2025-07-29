@@ -64,7 +64,7 @@ func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
 func main() { //nolint:funlen // we could split the flags and rest.
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
-	cli.ArgsHelp = " [digits:digits...] or current time"
+	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
