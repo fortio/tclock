@@ -34,6 +34,8 @@ tclock help
 flags:
   -24
          Use 24-hour time format
+  -no-blink
+         Don't blink the colon
   -no-seconds
          Don't show seconds
 ```

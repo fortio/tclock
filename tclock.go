@@ -4,11 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"fortio.org/cli"
+	"fortio.org/log"
 	"fortio.org/tclock/bignum"
 	"fortio.org/terminal/ansipixels"
 )
@@ -27,6 +26,8 @@ func main() {
 	cli.ArgsHelp = " [digits:digits...] or current time"
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
+	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
+	// fNoBox := flag.Bool("no-box", false, "Don't draw a box around the time")
 	cli.Main()
 	var numStr string
 	if flag.NArg() == 1 {
@@ -39,11 +40,11 @@ func main() {
 		format = "15:04"
 	}
 	seconds := !*fNoSeconds
+	hoffset := bignum.Width + 2
 	if seconds {
 		format += ":05"
+		hoffset = 0
 	}
-	prev := ""
-	tick := time.NewTicker(time.Second)
 	ap := ansipixels.NewAnsiPixels(60)
 	err := ap.Open()
 	if err != nil {
@@ -51,39 +52,46 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() {
-		fmt.Fprintf(ap.Out, "\r\n\n")
+		fmt.Fprintf(ap.Out, "\r\n\n\n\n")
 		ap.ShowCursor()
 		ap.EndSyncMode()
-		tick.Stop()
 		ap.Restore()
 	}()
 	ap.HideCursor()
 	ap.ClearScreen()
 	_ = ap.GetSize()
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	var prevNow time.Time
 	frame := 0
+	prev := ""
 	ap.OnResize = func() error {
 		ap.ClearScreen()
 		ap.WriteBoxed(ap.H/2-bignum.Height/2, TimeString(prev))
 		return nil
 	}
 	for {
-		numStr = time.Now().Format(format)
+		ap.StartSyncMode()
+		now := time.Now()
+		numStr = now.Format(format)
 		if numStr != prev {
-			if prev != "" {
-				fmt.Fprintf(ap.Out, "\x1b[%dA\r", bignum.Height-1) // Move cursor up to overwrite previous output
-			}
-			ap.StartSyncMode()
 			ap.WriteBoxed(ap.H/2-bignum.Height/2, TimeString(numStr))
-			ap.EndSyncMode()
 		}
 		prev = numStr
-		frame++
-		if frame%2 == 0 {
-			// invert the dots
+		now = now.Truncate(time.Second) // change only when seconds change
+		if now != prevNow && !*fNoBlink {
+			log.LogVf("frame %d now %v vs prev %v", frame, now, prevNow)
+			prevNow = now
+			frame++
+			what := "::"
+			if frame%2 == 0 {
+				what = ".."
+			}
+			ap.WriteAtStr(ap.W/2+bignum.Width+1-hoffset, ap.H/2-bignum.Height/2+2, what)
+			if seconds {
+				ap.WriteAtStr(ap.W/2-2*bignum.Width, ap.H/2-bignum.Height/2+2, what)
+			}
 
 		}
+		ap.EndSyncMode()
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
 			return
