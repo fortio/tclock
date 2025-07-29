@@ -74,6 +74,12 @@ const (
 ::
 
 
+
+
+
+..
+
+
 `
 	Height = 5
 	Width  = 4
@@ -107,10 +113,13 @@ func (d *Display) String() string {
 	return strings.Join(d.lines[:], "\n")
 }
 
-func (d *Display) PlaceDigit(r rune) {
+func (d *Display) PlaceDigit(r rune, blink bool) {
 	digit := int(r - '0')
 	if digit < 0 || digit > 9 {
 		digit = 10 // treat as colon
+		if blink {
+			digit = 11 // treat as dot
+		}
 	}
 	start := digit * (Height + 1)
 	for i := range Height {

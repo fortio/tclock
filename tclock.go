@@ -7,15 +7,14 @@ import (
 	"time"
 
 	"fortio.org/cli"
-	"fortio.org/log"
 	"fortio.org/tclock/bignum"
 	"fortio.org/terminal/ansipixels"
 )
 
-func TimeString(numStr string) string {
+func TimeString(numStr string, blink bool) string {
 	d := &bignum.Display{}
 	for _, c := range numStr {
-		d.PlaceDigit(c)
+		d.PlaceDigit(c, blink)
 	}
 	return d.String()
 }
@@ -32,7 +31,7 @@ func main() {
 	var numStr string
 	if flag.NArg() == 1 {
 		numStr = flag.Arg(0)
-		fmt.Println(TimeString(numStr))
+		fmt.Println(TimeString(numStr, false))
 		return
 	}
 	format := "3:04"
@@ -59,47 +58,33 @@ func main() {
 	ap.ClearScreen()
 	_ = ap.GetSize()
 	var prevNow time.Time
-	frame := 0
 	prev := ""
 	ap.OnResize = func() error {
 		ap.ClearScreen()
-		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev))
+		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev, false))
 		return nil
 	}
+	blink := false
+	doBlink := !*fNoBlink
 	for {
-		ap.StartSyncMode()
+		doDraw := false
 		now := time.Now()
 		numStr = now.Format(format)
 		if numStr != prev {
-			ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(numStr))
+			doDraw = true
 		}
 		prev = numStr
 		now = now.Truncate(time.Second) // change only when seconds change
-		if now != prevNow && !*fNoBlink {
-			log.LogVf("frame %d now %v vs prev %v", frame, now, prevNow)
-			prevNow = now
-			frame++
-			what := "::"
-			if frame%2 == 0 {
-				what = ".."
-			}
-			// The modulo to adjust what centered box does is rather ugly.
-			// we probably should place the clock ourselves and remember where the ::s are.
-			hoffset := bignum.Width + 2 + (1 - ap.W%2)
-			if seconds {
-				hoffset = 0
-			}
-			// before 10:00:00 one less digit so adjust where we find the ::
-			log.LogVf("numStr %q len %d", numStr, len(numStr))
-			if len(numStr) == 7 || len(numStr) == 4 {
-				hoffset += bignum.Width/2 + (1 - ap.W%2)
-			}
-			ap.WriteAtStr(ap.W/2+bignum.Width+1-hoffset, ap.H/2-bignum.Height/2+2, what)
-			if seconds {
-				ap.WriteAtStr(ap.W/2-2*bignum.Width-hoffset, ap.H/2-bignum.Height/2+2, what)
-			}
+		if now != prevNow && doBlink {
+			blink = !blink
+			doDraw = true
 		}
-		ap.EndSyncMode()
+		prevNow = now
+		if doDraw {
+			ap.StartSyncMode()
+			ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(numStr, blink))
+			ap.EndSyncMode()
+		}
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
 			return
