@@ -21,6 +21,8 @@ func TimeString(numStr string, blink bool) string {
 }
 
 func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
+	// ap.DrawSquareBox(0, 0, ap.W, ap.H)
+	// ap.WriteAt(0, ap.H-1, "Mouse %d, %d", ap.Mx, ap.My)
 	lines := strings.Split(str, "\n")
 	// Assume all lines are the same width (which is the case here with bignum padding).
 	width := ap.ScreenWidth(lines[0])
@@ -31,10 +33,19 @@ func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
 	if boxed {
 		height += 2 // add box padding
 	}
+	if x < 0 && y < 0 {
+		// center
+		x = ap.W/2 + width/2
+		y = ap.H/2 + height/2 + 1
+	}
+	x = min(x, ap.W)
+	y = min(y, ap.H)
 	// draw from bottom right corner
+	x++
+	y++
 	x = max(x, width)
 	y = max(y, height)
-	//	ap.WriteAt(0, ap.H-2, "x, y, width, height: %d, %d, %d, %d", x, y, width, height)
+	// ap.WriteAt(0, ap.H-3, "x, y, width, height: %d, %d, %d, %d", x, y, width, height)
 	if boxed {
 		// draw box
 		ap.DrawRoundBox(x-width, y-height, width, height)
@@ -47,6 +58,7 @@ func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
 	for i, line := range lines {
 		ap.WriteAtStr(x-width, y-height+i, line)
 	}
+	//ap.MoveCursor(x-1, y-1)
 }
 
 func main() {
@@ -93,13 +105,12 @@ func main() {
 	prev := ""
 	ap.OnResize = func() error {
 		ap.ClearScreen()
-		DrawAt(ap, ap.Mx, ap.My, !*fNoBox, TimeString(prev, false))
+		DrawAt(ap, -1, -1, !*fNoBox, TimeString(prev, false))
 		return nil
 	}
 	blinkEnabled := !*fNoBlink
 	blink := false
 	// TODO: how to get initial mouse position?
-	ap.Mx, ap.My = ap.W/2+bignum.Width*3, (ap.H+bignum.Height)/2 // sorta-center initially
 	x, y := ap.Mx, ap.My
 	trackMouse := true
 	for {
@@ -134,8 +145,9 @@ func main() {
 		if doDraw {
 			ap.StartSyncMode()
 			ap.ClearScreen()
-			// ap.WriteAt(0, ap.H-1, "Mouse %d, %d", ap.Mx, ap.My)
-			DrawAt(ap, x, y, !*fNoBox, TimeString(prev, blink))
+			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
+			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
+			DrawAt(ap, x-1, y-1, !*fNoBox, TimeString(prev, blink))
 			ap.EndSyncMode()
 		}
 	}
