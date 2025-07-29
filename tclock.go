@@ -7,15 +7,14 @@ import (
 	"time"
 
 	"fortio.org/cli"
-	"fortio.org/log"
 	"fortio.org/tclock/bignum"
 	"fortio.org/terminal/ansipixels"
 )
 
-func TimeString(numStr string) string {
+func TimeString(numStr string, blink bool) string {
 	d := &bignum.Display{}
 	for _, c := range numStr {
-		d.PlaceDigit(c)
+		d.PlaceDigit(c, blink)
 	}
 	return d.String()
 }
@@ -32,7 +31,7 @@ func main() {
 	var numStr string
 	if flag.NArg() == 1 {
 		numStr = flag.Arg(0)
-		fmt.Println(TimeString(numStr))
+		fmt.Println(TimeString(numStr, false))
 		return
 	}
 	format := "3:04"
@@ -40,10 +39,8 @@ func main() {
 		format = "15:04"
 	}
 	seconds := !*fNoSeconds
-	hoffset := bignum.Width + 2
 	if seconds {
 		format += ":05"
-		hoffset = 0
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	err := ap.Open()
@@ -61,36 +58,33 @@ func main() {
 	ap.ClearScreen()
 	_ = ap.GetSize()
 	var prevNow time.Time
-	frame := 0
 	prev := ""
 	ap.OnResize = func() error {
 		ap.ClearScreen()
-		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev))
+		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev, false))
 		return nil
 	}
+	blinkEnabled := !*fNoBlink
+	blink := false
 	for {
-		ap.StartSyncMode()
+		doDraw := false
 		now := time.Now()
 		numStr = now.Format(format)
 		if numStr != prev {
-			ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(numStr))
+			doDraw = true
 		}
 		prev = numStr
 		now = now.Truncate(time.Second) // change only when seconds change
-		if now != prevNow && !*fNoBlink {
-			log.LogVf("frame %d now %v vs prev %v", frame, now, prevNow)
-			prevNow = now
-			frame++
-			what := "::"
-			if frame%2 == 0 {
-				what = ".."
-			}
-			ap.WriteAtStr(ap.W/2+bignum.Width+1-hoffset, ap.H/2-bignum.Height/2+2, what)
-			if seconds {
-				ap.WriteAtStr(ap.W/2-2*bignum.Width, ap.H/2-bignum.Height/2+2, what)
-			}
+		if now != prevNow && blinkEnabled {
+			blink = !blink
+			doDraw = true
 		}
-		ap.EndSyncMode()
+		prevNow = now
+		if doDraw {
+			ap.StartSyncMode()
+			ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(numStr, blink))
+			ap.EndSyncMode()
+		}
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
 			return
