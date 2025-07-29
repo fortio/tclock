@@ -30,15 +30,20 @@ brew install fortio/tap/tclock
 ```sh
 tclock help
 ```
+```
+flags:
+  -24   Use 24-hour time format
+  -s    Show seconds (default is minutes only)
+```
 
 ```sh
-tclock 12:34
+$ tclock -s -24
 ```
 
 ```
-      ━━       ━━
-   ┃    ┃        ┃ ┃  ┃
-      ━━   ::  ━━   ━━
-   ┃ ┃           ┃    ┃
-      ━━       ━━
+ ━━   ━━           ━━      ━━   ━━
+   ┃ ┃  ┃    ┃  ┃    ┃       ┃ ┃
+ ━━       ::  ━━   ━━  ::  ━━   ━━
+┃    ┃  ┃       ┃ ┃          ┃    ┃
+ ━━   ━━           ━━      ━━   ━━
 ```
