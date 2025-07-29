@@ -147,7 +147,7 @@ func main() {
 			ap.ClearScreen()
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
-			DrawAt(ap, x-1, y-1, !*fNoBox, TimeString(prev, blink))
+			DrawAt(ap, x-1, y-1, !*fNoBox, TimeString(numStr, blink))
 			ap.EndSyncMode()
 		}
 	}
