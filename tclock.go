@@ -65,5 +65,4 @@ func main() {
 		case <-tick.C:
 		}
 	}
-
 }
