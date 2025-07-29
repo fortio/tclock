@@ -1,4 +1,4 @@
-[![GoDoc](https://godoc.org/fortio.org/tclock?status.svg)](https://pkg.go.dev/fortio.org/tclock)
+[![GoDoc](https://godoc.org/fortio.org/tclock/bignum?status.svg)](https://pkg.go.dev/fortio.org/tclock/bignum)
 [![Go Report Card](https://goreportcard.com/badge/fortio.org/tclock)](https://goreportcard.com/report/fortio.org/tclock)
 [![CI Checks](https://github.com/fortio/tclock/actions/workflows/include.yml/badge.svg)](https://github.com/fortio/tclock/actions/workflows/include.yml)
 # tclock
