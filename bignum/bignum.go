@@ -1,3 +1,5 @@
+// Package bignum implements a display for large numbers using 7 segments style
+// unicode for terminal output. In the style of early digital clocks.
 package bignum
 
 import (
