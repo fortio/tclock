@@ -27,6 +27,8 @@ brew install fortio/tap/tclock
 
 ## Run
 
+Move the mouse to place the clock, click to leave it there, click again to put it somewhere else.
+
 ```sh
 tclock help
 ```
@@ -36,6 +38,7 @@ flags:
          Use 24-hour time format
   -no-blink
          Don't blink the colon
+
   -no-seconds
          Don't show seconds
 ```

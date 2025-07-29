@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"fortio.org/cli"
@@ -19,6 +20,35 @@ func TimeString(numStr string, blink bool) string {
 	return d.String()
 }
 
+func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
+	lines := strings.Split(str, "\n")
+	// Assume all lines are the same width (which is the case here with bignum padding).
+	width := ap.ScreenWidth(lines[0])
+	if boxed {
+		width += 2 // add box padding
+	}
+	height := len(lines)
+	if boxed {
+		height += 2 // add box padding
+	}
+	// draw from bottom right corner
+	x = max(x, width)
+	y = max(y, height)
+	//	ap.WriteAt(0, ap.H-2, "x, y, width, height: %d, %d, %d, %d", x, y, width, height)
+	if boxed {
+		// draw box
+		ap.DrawRoundBox(x-width, y-height, width, height)
+		x--
+		y--
+		width -= 2
+		height -= 2
+	}
+	// draw the lines
+	for i, line := range lines {
+		ap.WriteAtStr(x-width, y-height+i, line)
+	}
+}
+
 func main() {
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
@@ -26,7 +56,7 @@ func main() {
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
-	// fNoBox := flag.Bool("no-box", false, "Don't draw a box around the time")
+	fNoBox := flag.Bool("no-box", false, "Don't draw a box around the time")
 	cli.Main()
 	var numStr string
 	if flag.NArg() == 1 {
@@ -51,22 +81,39 @@ func main() {
 	defer func() {
 		fmt.Fprintf(ap.Out, "\r\n\n\n\n")
 		ap.ShowCursor()
+		ap.MouseTrackingOff()
 		ap.EndSyncMode()
 		ap.Restore()
 	}()
 	ap.HideCursor()
 	ap.ClearScreen()
+	ap.MouseTrackingOn()
 	_ = ap.GetSize()
 	var prevNow time.Time
 	prev := ""
 	ap.OnResize = func() error {
 		ap.ClearScreen()
-		ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(prev, false))
+		DrawAt(ap, ap.Mx, ap.My, !*fNoBox, TimeString(prev, false))
 		return nil
 	}
 	blinkEnabled := !*fNoBlink
 	blink := false
+	// TODO: how to get initial mouse position?
+	ap.Mx, ap.My = ap.W/2+bignum.Width*3, (ap.H+bignum.Height)/2 // sorta-center initially
+	x, y := ap.Mx, ap.My
+	trackMouse := true
 	for {
+		_, err := ap.ReadOrResizeOrSignalOnce()
+		if err != nil {
+			return
+		}
+		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
+			return // exit on 'q' or Ctrl-C
+		}
+		// Click to place the time at the mouse position (or switch back to move with mouse).
+		if ap.LeftClick() {
+			trackMouse = !trackMouse
+		}
 		doDraw := false
 		now := time.Now()
 		numStr = now.Format(format)
@@ -80,17 +127,16 @@ func main() {
 			doDraw = true
 		}
 		prevNow = now
+		if trackMouse && (ap.Mx != x || ap.My != y) {
+			x, y = ap.Mx, ap.My
+			doDraw = true
+		}
 		if doDraw {
 			ap.StartSyncMode()
-			ap.WriteBoxed(ap.H/2-bignum.Height/2, "%s", TimeString(numStr, blink))
+			ap.ClearScreen()
+			// ap.WriteAt(0, ap.H-1, "Mouse %d, %d", ap.Mx, ap.My)
+			DrawAt(ap, x, y, !*fNoBox, TimeString(prev, blink))
 			ap.EndSyncMode()
-		}
-		_, err := ap.ReadOrResizeOrSignalOnce()
-		if err != nil {
-			return
-		}
-		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
-			return // exit on 'q' or Ctrl-C
 		}
 	}
 }
