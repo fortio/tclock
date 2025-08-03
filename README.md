@@ -45,7 +45,7 @@ flags:
         Pulse the color (only works for RGB)
   -color string
         Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: none, black, red, green,
-yellow, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brightyellow,
+yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brightyellow,
 brightblue, brightpurple, brightcyan, white (default "red")
   -color-box string
         Color box around the time

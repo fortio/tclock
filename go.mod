@@ -6,7 +6,7 @@ require (
 	fortio.org/cli v1.10.0
 	fortio.org/log v1.17.2
 	fortio.org/safecast v1.0.0
-	fortio.org/terminal v0.42.1-0.20250803180100-c74e6d817ed3
+	fortio.org/terminal v0.43.0
 )
 
 require (
