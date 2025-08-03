@@ -31,12 +31,12 @@ type Config struct {
 	bounce   int // bounce counter, 0 means no bouncing
 }
 
-func bounce(f, max int) int {
-	m := f % (2 * max)
-	if m < max {
+func bounce(frame, maximum int) int {
+	m := frame % (2 * maximum)
+	if m < maximum {
 		return m
 	}
-	return 2*max - 1 - m
+	return 2*maximum - 1 - m
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
