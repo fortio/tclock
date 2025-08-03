@@ -40,11 +40,15 @@ flags:
   -bounce int
         Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.
   -box
-        Draw a simple box around the time
+        Draw a simple rounded corner outline around the time
+  -breath
+        Pulse the color (only works for RGB)
   -color string
-        Color to use RRGGBB or one of: red, brightred, green, blue, yellow, cyan, white, black (default "red")
+        Color to use RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black (default "red")
   -color-box string
-        RGB color box around the time
+        Color box around the time
+  -debug
+        Debug mode, display mouse position and screen borders
   -inverse
         Inverse the foreground and background
   -no-blink

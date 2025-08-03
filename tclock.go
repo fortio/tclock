@@ -28,7 +28,10 @@ type Config struct {
 	colorBox string
 	inverse  bool
 	debug    bool
-	bounce   int // bounce counter, 0 means no bouncing
+	bounce   int  // bounce counter, 0 means no bouncing
+	frame    int  // frame counter for brathing effect
+	breath   bool // whether to pulse the color
+	r, g, b  int  // RGB color components for breathing effect
 }
 
 func bounce(frame, maximum int) int {
@@ -37,6 +40,17 @@ func bounce(frame, maximum int) int {
 		return m
 	}
 	return 2*maximum - 1 - m
+}
+
+func breath(frame, r, g, b int) string {
+	maxi := max(r, g, b)
+	mini := 2 * maxi / 5
+	n := maxi - mini
+	x := bounce(frame, n)
+	r = max(0, r-x)
+	g = max(0, g-x)
+	b = max(0, b-x)
+	return ColorFromRGB(r, g, b)
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
@@ -85,8 +99,11 @@ func (c *Config) DrawAt(x, y int, str string) {
 		width -= 2
 		height -= 2
 	}
-	// draw the lines
+	// draw the digits
 	prefix := c.color
+	if c.breath {
+		prefix = breath(c.frame, c.r, c.g, c.b)
+	}
 	if c.inverse {
 		prefix = ansipixels.Inverse + c.color
 	}
@@ -98,6 +115,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 }
 
 var colorMap = map[string]string{
+	"none":      "", // default color.
 	"red":       ansipixels.Red,
 	"brightred": ansipixels.BrightRed,
 	"green":     ansipixels.Green,
@@ -112,23 +130,35 @@ func main() {
 	os.Exit(Main())
 }
 
+func ColorFromRGB(r, g, b int) string {
+	return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
+}
+
+func RGBFromColor(color string) (r, g, b int, err error) {
+	var i int
+	_, err = fmt.Sscanf(color, "%x", &i)
+	if err != nil {
+		return 0, 0, 0, fmt.Errorf("invalid hex color '%s', must be hex RRGGBB: %w", color, err)
+	}
+	r = (i >> 16) & 0xFF
+	g = (i >> 8) & 0xFF
+	b = i & 0xFF
+	return r, g, b, nil
+}
+
 func ColorFromString(color string) (string, error) {
 	if c, ok := colorMap[color]; ok {
 		return c, nil
 	}
 	if len(color) == 6 {
-		var i int
-		_, err := fmt.Sscanf(color, "%x", &i)
+		r, g, b, err := RGBFromColor(color)
 		if err != nil {
-			return "", fmt.Errorf("invalid hex color '%s', must be hex RRGGBB: %w", color, err)
+			return "", err
 		}
-		r := (i >> 16) & 0xFF
-		g := (i >> 8) & 0xFF
-		b := i & 0xFF
-		return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b), nil
+		return ColorFromRGB(r, g, b), nil
 	}
 	return "", fmt.Errorf("invalid color '%s',"+
-		" must be RRGGBB or one of: red, brightred, green, blue, yellow, cyan, white, black", color)
+		" must be RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black", color)
 }
 
 func Main() int { //nolint:funlen // we could split the flags and rest.
@@ -139,9 +169,11 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
-	fBox := flag.Bool("box", false, "Draw a simple box around the time")
-	fColorBox := flag.String("color-box", "", "RGB color box around the time")
-	fColor := flag.String("color", "red", "Color to use RRGGBB or one of: red, brightred, green, blue, yellow, cyan, white, black")
+	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
+	fColorBox := flag.String("color-box", "", "Color box around the time")
+	fColor := flag.String("color", "red",
+		"Color to use RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black")
+	fBreath := flag.Bool("breath", false, "Pulse the color (only works for RGB)")
 	fInverse := flag.Bool("inverse", false, "Inverse the foreground and background")
 	fDebug := flag.Bool("debug", false, "Debug mode, display mouse position and screen borders")
 	cli.Main()
@@ -160,8 +192,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		format += ":05"
 	}
 	ap := ansipixels.NewAnsiPixels(60)
-	err := ap.Open()
-	if err != nil {
+	if err := ap.Open(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error opening terminal: %v\n", err)
 		os.Exit(1)
 	}
@@ -177,16 +208,30 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		boxed:   *fBox,
 		inverse: *fInverse,
 		debug:   *fDebug,
+		breath:  *fBreath,
 	}
-	cfg.color, err = ColorFromString(*fColor)
-	if err != nil {
-		return log.FErrf("Color error: %v", err)
+	if cfg.breath {
+		r, g, b, err := RGBFromColor(*fColor)
+		if err != nil {
+			log.Errf("Using red instead: %v", err)
+			r = 255
+			g = 20
+			b = 30
+		}
+		cfg.r, cfg.g, cfg.b = r, g, b
+	} else {
+		color, err := ColorFromString(*fColor)
+		if err != nil {
+			return log.FErrf("Color error: %v", err)
+		}
+		cfg.color = color
 	}
 	if *fColorBox != "" {
-		cfg.colorBox, err = ColorFromString(*fColorBox)
+		color, err := ColorFromString(*fColorBox)
 		if err != nil {
 			return log.FErrf("Color box error: %v", err)
 		}
+		cfg.colorBox = color
 		cfg.boxed = true // color box implies boxed
 	}
 	ap.HideCursor()
@@ -223,7 +268,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		if ap.LeftClick() {
 			trackMouse = !trackMouse
 		}
-		doDraw := false
+		doDraw := cfg.breath
 		now := time.Now()
 		numStr = now.Format(format)
 		if numStr != prev {
@@ -248,6 +293,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 			doDraw = true
 		}
 		if doDraw {
+			cfg.frame++
 			ap.StartSyncMode()
 			ap.ClearScreen()
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
