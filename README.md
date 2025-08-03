@@ -37,6 +37,8 @@ tclock help
 flags:
   -24
         Use 24-hour time format
+  -bounce int
+        Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.
   -box
         Draw a simple box around the time
   -color string

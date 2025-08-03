@@ -28,6 +28,15 @@ type Config struct {
 	colorBox string
 	inverse  bool
 	debug    bool
+	bounce   int // bounce counter, 0 means no bouncing
+}
+
+func bounce(f, max int) int {
+	m := f % (2 * max)
+	if m < max {
+		return m
+	}
+	return 2*max - 1 - m
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
@@ -54,6 +63,10 @@ func (c *Config) DrawAt(x, y int, str string) {
 	// so clamp to valid screen dimensions.
 	x = min(x, c.ap.W-1)
 	y = min(y, c.ap.H-1)
+	if c.bounce != 0 {
+		x = width - 1 + bounce(c.bounce, c.ap.W-width+1)
+		y = height - 1 + bounce(c.bounce, c.ap.H-height+1)
+	}
 	// draw from bottom right corner
 	x++
 	y++
@@ -122,6 +135,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
 	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
+	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
@@ -177,7 +191,13 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	}
 	ap.HideCursor()
 	ap.ClearScreen()
-	ap.MouseTrackingOn()
+	trackMouse := false
+	bounceSpeed := *fBounce
+	bounce := (bounceSpeed > 0)
+	if !bounce {
+		ap.MouseTrackingOn()
+		trackMouse = true
+	}
 	_ = ap.GetSize()
 	var prevNow time.Time
 	prev := ""
@@ -190,7 +210,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	blink := false
 	// TODO: how to get initial mouse position?
 	x, y := ap.Mx, ap.My
-	trackMouse := true
+	frame := 0
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
@@ -216,7 +236,14 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 			doDraw = true
 		}
 		prevNow = now
-		if trackMouse && (ap.Mx != x || ap.My != y) {
+		switch {
+		case bounce:
+			if frame%bounceSpeed == 0 {
+				cfg.bounce++
+				doDraw = true
+			}
+			frame++
+		case trackMouse && (ap.Mx != x || ap.My != y):
 			x, y = ap.Mx, ap.My
 			doDraw = true
 		}
