@@ -9,8 +9,10 @@ import (
 
 	"fortio.org/cli"
 	"fortio.org/log"
+	"fortio.org/safecast"
 	"fortio.org/tclock/bignum"
 	"fortio.org/terminal/ansipixels"
+	"fortio.org/terminal/ansipixels/tcolor"
 )
 
 func TimeString(numStr string, blink bool) string {
@@ -22,16 +24,17 @@ func TimeString(numStr string, blink bool) string {
 }
 
 type Config struct {
-	ap       *ansipixels.AnsiPixels
-	boxed    bool
-	color    string
-	colorBox string
-	inverse  bool
-	debug    bool
-	bounce   int  // bounce counter, 0 means no bouncing
-	frame    int  // frame counter for breathing effect
-	breath   bool // whether to pulse the color
-	r, g, b  int  // RGB color components for breathing effect
+	ap          *ansipixels.AnsiPixels
+	boxed       bool
+	color       string
+	colorBox    string
+	inverse     bool
+	debug       bool
+	bounce      int  // bounce counter, 0 means no bouncing
+	frame       int  // frame counter for breathing effect
+	breath      bool // whether to pulse the color
+	bcolor      tcolor.RGBColor
+	colorOutput tcolor.ColorOutput
 }
 
 func bounce(frame, maximum int) int {
@@ -42,15 +45,15 @@ func bounce(frame, maximum int) int {
 	return 2*maximum - 1 - m
 }
 
-func breath(frame, r, g, b int) string {
-	maxi := max(r, g, b)
+func breath(frame int, c tcolor.RGBColor) tcolor.Color {
+	maxi := int(max(c.R, c.G, c.B))
 	mini := 2 * maxi / 5
 	n := maxi - mini
 	x := bounce(frame, n)
-	r = max(0, r-x)
-	g = max(0, g-x)
-	b = max(0, b-x)
-	return ColorFromRGB(r, g, b)
+	c.R = safecast.MustConvert[uint8](max(0, int(c.R)-x))
+	c.G = safecast.MustConvert[uint8](max(0, int(c.G)-x))
+	c.B = safecast.MustConvert[uint8](max(0, int(c.B)-x))
+	return tcolor.Color{RGBColor: c}
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
@@ -102,7 +105,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 	// draw the digits
 	prefix := c.color
 	if c.breath {
-		prefix = breath(c.frame, c.r, c.g, c.b)
+		prefix = c.colorOutput.Foreground(breath(c.frame, c.bcolor))
 	}
 	if c.inverse {
 		prefix = ansipixels.Inverse + c.color
@@ -114,51 +117,8 @@ func (c *Config) DrawAt(x, y int, str string) {
 	// ap.MoveCursor(x-1, y-1)
 }
 
-var colorMap = map[string]string{
-	"none":      "", // default color.
-	"red":       ansipixels.Red,
-	"brightred": ansipixels.BrightRed,
-	"green":     ansipixels.Green,
-	"blue":      ansipixels.Blue,
-	"yellow":    ansipixels.Yellow,
-	"cyan":      ansipixels.Cyan,
-	"white":     ansipixels.White,
-	"black":     ansipixels.Black,
-}
-
 func main() {
 	os.Exit(Main())
-}
-
-func ColorFromRGB(r, g, b int) string {
-	return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b)
-}
-
-func RGBFromColor(color string) (r, g, b int, err error) {
-	var i int
-	_, err = fmt.Sscanf(color, "%x", &i)
-	if err != nil {
-		return 0, 0, 0, fmt.Errorf("invalid hex color '%s', must be hex RRGGBB: %w", color, err)
-	}
-	r = (i >> 16) & 0xFF
-	g = (i >> 8) & 0xFF
-	b = i & 0xFF
-	return r, g, b, nil
-}
-
-func ColorFromString(color string) (string, error) {
-	if c, ok := colorMap[color]; ok {
-		return c, nil
-	}
-	if len(color) == 6 {
-		r, g, b, err := RGBFromColor(color)
-		if err != nil {
-			return "", err
-		}
-		return ColorFromRGB(r, g, b), nil
-	}
-	return "", fmt.Errorf("invalid color '%s',"+
-		" must be RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black", color)
 }
 
 func Main() int { //nolint:funlen // we could split the flags and rest.
@@ -172,11 +132,18 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
 	fColorBox := flag.String("color-box", "", "Color box around the time")
 	fColor := flag.String("color", "red",
-		"Color to use RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black")
+		"Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: "+tcolor.ColorHelp)
 	fBreath := flag.Bool("breath", false, "Pulse the color (only works for RGB)")
 	fInverse := flag.Bool("inverse", false, "Inverse the foreground and background")
 	fDebug := flag.Bool("debug", false, "Debug mode, display mouse position and screen borders")
+	defaultTrueColor := false
+	if os.Getenv("COLORTERM") != "" {
+		defaultTrueColor = true
+	}
+	fTrueColor := flag.Bool("true-color", defaultTrueColor,
+		"Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if COLORTERM is set)")
 	cli.Main()
+	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	var numStr string
 	if flag.NArg() == 1 {
 		numStr = flag.Arg(0)
@@ -204,34 +171,34 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		ap.Restore()
 	}()
 	cfg := &Config{
-		ap:      ap,
-		boxed:   *fBox,
-		inverse: *fInverse,
-		debug:   *fDebug,
-		breath:  *fBreath,
+		ap:          ap,
+		boxed:       *fBox,
+		inverse:     *fInverse,
+		debug:       *fDebug,
+		breath:      *fBreath,
+		colorOutput: colorOutput,
 	}
 	if cfg.breath {
-		r, g, b, err := RGBFromColor(*fColor)
-		if err != nil {
-			log.Errf("Using red instead: %v", err)
-			r = 255
-			g = 20
-			b = 30
+		var black tcolor.RGBColor
+		color, err := tcolor.FromString(*fColor)
+		cfg.bcolor = color.RGBColor
+		if err != nil || cfg.bcolor == black {
+			log.Errf("Using red instead of color %v / %v", err, color)
+			cfg.bcolor = tcolor.RGBColor{R: 255, G: 20, B: 30}
 		}
-		cfg.r, cfg.g, cfg.b = r, g, b
 	} else {
-		color, err := ColorFromString(*fColor)
+		color, err := tcolor.FromString(*fColor)
 		if err != nil {
 			return log.FErrf("Color error: %v", err)
 		}
-		cfg.color = color
+		cfg.color = colorOutput.Foreground(color)
 	}
 	if *fColorBox != "" {
-		color, err := ColorFromString(*fColorBox)
+		color, err := tcolor.FromString(*fColorBox)
 		if err != nil {
 			return log.FErrf("Color box error: %v", err)
 		}
-		cfg.colorBox = color
+		cfg.colorBox = colorOutput.Foreground(color)
 		cfg.boxed = true // color box implies boxed
 	}
 	ap.HideCursor()

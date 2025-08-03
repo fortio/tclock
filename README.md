@@ -28,7 +28,7 @@ brew install fortio/tap/tclock
 ## Run
 
 Move the mouse to place the clock, click to leave it there, click again to put it somewhere else.
-Change the color, draw box around, etc.. with flags.
+Change the color (can be specified by name, RRGGBB or Hue,Sat,Luminance in [0,1] range), draw boxes around, etc.. with flags.
 
 ```sh
 tclock help
@@ -44,7 +44,9 @@ flags:
   -breath
         Pulse the color (only works for RGB)
   -color string
-        Color to use RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black (default "red")
+        Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: none, black, red, green,
+yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brightyellow,
+brightblue, brightpurple, brightcyan, white (default "red")
   -color-box string
         Color box around the time
   -debug
@@ -55,6 +57,9 @@ flags:
         Don't blink the colon
   -no-seconds
         Don't show seconds
+  -true-color
+        Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
+COLORTERM is set)
 ```
 
 ```sh
