@@ -180,6 +180,11 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	_ = ap.GetSize()
 	var prevNow time.Time
 	prev := ""
+	ap.OnResize = func() error {
+		ap.ClearScreen()
+		cfg.DrawAt(-1, -1, TimeString(prev, false))
+		return nil
+	}
 	blinkEnabled := !*fNoBlink
 	blink := false
 	// TODO: how to get initial mouse position?
