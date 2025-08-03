@@ -50,6 +50,8 @@ func (c *Config) DrawAt(x, y int, str string) {
 		x = c.ap.W/2 + width/2
 		y = c.ap.H/2 + height/2 + 1
 	}
+	// We are in 0.0 coordinates, but on apple terminal for instance the mouse can go past the width (!)
+	// so clamp to valid screen dimensions.
 	x = min(x, c.ap.W-1)
 	y = min(y, c.ap.H-1)
 	// draw from bottom right corner
@@ -159,7 +161,6 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	cfg := &Config{
 		ap:      ap,
 		boxed:   *fBox,
-		color:   colorMap[*fColor],
 		inverse: *fInverse,
 		debug:   *fDebug,
 	}
