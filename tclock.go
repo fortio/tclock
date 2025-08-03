@@ -132,7 +132,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
 	fColorBox := flag.String("color-box", "", "Color box around the time")
 	fColor := flag.String("color", "red",
-		"Color to use RRGGBB or one of: none, red, brightred, green, blue, yellow, cyan, white, black")
+		"Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: "+tcolor.ColorHelp)
 	fBreath := flag.Bool("breath", false, "Pulse the color (only works for RGB)")
 	fInverse := flag.Bool("inverse", false, "Inverse the foreground and background")
 	fDebug := flag.Bool("debug", false, "Debug mode, display mouse position and screen borders")
