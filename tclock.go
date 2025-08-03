@@ -29,7 +29,7 @@ type Config struct {
 	inverse  bool
 	debug    bool
 	bounce   int  // bounce counter, 0 means no bouncing
-	frame    int  // frame counter for brathing effect
+	frame    int  // frame counter for breathing effect
 	breath   bool // whether to pulse the color
 	r, g, b  int  // RGB color components for breathing effect
 }
