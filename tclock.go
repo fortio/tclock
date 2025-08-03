@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"fortio.org/cli"
+	"fortio.org/log"
 	"fortio.org/tclock/bignum"
 	"fortio.org/terminal/ansipixels"
 )
@@ -20,61 +21,119 @@ func TimeString(numStr string, blink bool) string {
 	return d.String()
 }
 
-func DrawAt(ap *ansipixels.AnsiPixels, x, y int, boxed bool, str string) {
-	// ap.DrawSquareBox(0, 0, ap.W, ap.H)
-	// ap.WriteAt(0, ap.H-1, "Mouse %d, %d", ap.Mx, ap.My)
+type Config struct {
+	ap       *ansipixels.AnsiPixels
+	boxed    bool
+	color    string
+	colorBox string
+	inverse  bool
+	debug    bool
+}
+
+func (c *Config) DrawAt(x, y int, str string) {
+	if c.debug {
+		c.ap.DrawSquareBox(0, 0, c.ap.W, c.ap.H)
+		c.ap.WriteAt(0, c.ap.H-1, "Mouse %d, %d [%dx%d]", c.ap.Mx, c.ap.My, c.ap.W, c.ap.H)
+	}
 	lines := strings.Split(str, "\n")
 	// Assume all lines are the same width (which is the case here with bignum padding).
-	width := ap.ScreenWidth(lines[0])
-	if boxed {
+	width := c.ap.ScreenWidth(lines[0])
+	if c.boxed {
 		width += 2 // add box padding
 	}
 	height := len(lines)
-	if boxed {
+	if c.boxed {
 		height += 2 // add box padding
 	}
 	if x < 0 && y < 0 {
 		// center
-		x = ap.W/2 + width/2
-		y = ap.H/2 + height/2 + 1
+		x = c.ap.W/2 + width/2
+		y = c.ap.H/2 + height/2 + 1
 	}
-	x = min(x, ap.W)
-	y = min(y, ap.H)
+	x = min(x, c.ap.W-1)
+	y = min(y, c.ap.H-1)
 	// draw from bottom right corner
 	x++
 	y++
 	x = max(x, width)
 	y = max(y, height)
-	// ap.WriteAt(0, ap.H-3, "x, y, width, height: %d, %d, %d, %d", x, y, width, height)
-	if boxed {
-		// draw box
-		ap.DrawRoundBox(x-width, y-height, width, height)
+	if c.boxed {
+		if c.colorBox != "" {
+			// draw box
+			c.ap.DrawColoredBox(x-width, y-height, width, height, c.colorBox, false)
+		} else {
+			// draw box around the time
+			c.ap.DrawRoundBox(x-width, y-height, width, height)
+		}
 		x--
 		y--
 		width -= 2
 		height -= 2
 	}
 	// draw the lines
+	prefix := c.color
+	if c.inverse {
+		prefix = ansipixels.Inverse + c.color
+	}
+	suffix := ansipixels.Reset
 	for i, line := range lines {
-		ap.WriteAtStr(x-width, y-height+i, line)
+		c.ap.WriteAtStr(x-width, y-height+i, prefix+line+suffix)
 	}
 	// ap.MoveCursor(x-1, y-1)
 }
 
-func main() { //nolint:funlen // we could split the flags and rest.
+var colorMap = map[string]string{
+	"red":       ansipixels.Red,
+	"brightred": ansipixels.BrightRed,
+	"green":     ansipixels.Green,
+	"blue":      ansipixels.Blue,
+	"yellow":    ansipixels.Yellow,
+	"cyan":      ansipixels.Cyan,
+	"white":     ansipixels.White,
+	"black":     ansipixels.Black,
+}
+
+func main() {
+	os.Exit(Main())
+}
+
+func ColorFromString(color string) (string, error) {
+	if c, ok := colorMap[color]; ok {
+		return c, nil
+	}
+	if len(color) == 6 {
+		var i int
+		_, err := fmt.Sscanf(color, "%x", &i)
+		if err != nil {
+			return "", fmt.Errorf("invalid hex color '%s', must be hex RRGGBB: %w", color, err)
+		}
+		r := (i >> 16) & 0xFF
+		g := (i >> 8) & 0xFF
+		b := i & 0xFF
+		return fmt.Sprintf("\033[38;2;%d;%d;%dm", r, g, b), nil
+	}
+	return "", fmt.Errorf("invalid color '%s',"+
+		" must be RRGGBB or one of: red, brightred, green, blue, yellow, cyan, white, black", color)
+}
+
+func Main() int { //nolint:funlen // we could split the flags and rest.
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
 	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
-	fNoBox := flag.Bool("no-box", false, "Don't draw a box around the time")
+	fBox := flag.Bool("box", false, "Draw a simple box around the time")
+	fColorBox := flag.String("color-box", "", "RGB color box around the time")
+	fColor := flag.String("color", "red", "Color to use RRGGBB or one of: red, brightred, green, blue, yellow, cyan, white, black")
+	fInverse := flag.Bool("inverse", false, "Inverse the foreground and background")
+	fDebug := flag.Bool("debug", false, "Debug mode, display mouse position and screen borders")
 	cli.Main()
 	var numStr string
 	if flag.NArg() == 1 {
 		numStr = flag.Arg(0)
 		fmt.Println(TimeString(numStr, false))
-		return
+		return 0
 	}
 	format := "3:04"
 	if *f24 {
@@ -97,17 +156,30 @@ func main() { //nolint:funlen // we could split the flags and rest.
 		ap.EndSyncMode()
 		ap.Restore()
 	}()
+	cfg := &Config{
+		ap:      ap,
+		boxed:   *fBox,
+		color:   colorMap[*fColor],
+		inverse: *fInverse,
+		debug:   *fDebug,
+	}
+	cfg.color, err = ColorFromString(*fColor)
+	if err != nil {
+		return log.FErrf("Color error: %v", err)
+	}
+	if *fColorBox != "" {
+		cfg.colorBox, err = ColorFromString(*fColorBox)
+		if err != nil {
+			return log.FErrf("Color box error: %v", err)
+		}
+		cfg.boxed = true // color box implies boxed
+	}
 	ap.HideCursor()
 	ap.ClearScreen()
 	ap.MouseTrackingOn()
 	_ = ap.GetSize()
 	var prevNow time.Time
 	prev := ""
-	ap.OnResize = func() error {
-		ap.ClearScreen()
-		DrawAt(ap, -1, -1, !*fNoBox, TimeString(prev, false))
-		return nil
-	}
 	blinkEnabled := !*fNoBlink
 	blink := false
 	// TODO: how to get initial mouse position?
@@ -116,10 +188,10 @@ func main() { //nolint:funlen // we could split the flags and rest.
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
-			return
+			return 1
 		}
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
-			return // exit on 'q' or Ctrl-C
+			return 0 // exit on 'q' or Ctrl-C
 		}
 		// Click to place the time at the mouse position (or switch back to move with mouse).
 		if ap.LeftClick() {
@@ -147,7 +219,7 @@ func main() { //nolint:funlen // we could split the flags and rest.
 			ap.ClearScreen()
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
-			DrawAt(ap, x-1, y-1, !*fNoBox, TimeString(numStr, blink))
+			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))
 			ap.EndSyncMode()
 		}
 	}
