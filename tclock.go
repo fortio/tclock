@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"strings"
 	"time"
@@ -35,6 +36,8 @@ type Config struct {
 	breath      bool // whether to pulse the color
 	bcolor      tcolor.RGBColor
 	colorOutput tcolor.ColorOutput
+	colorDisc   string  // color disc around the time, if set
+	radius      float64 // radius of the disc around the time in proportion of the time width
 }
 
 func bounce(frame, maximum int) int {
@@ -89,6 +92,18 @@ func (c *Config) DrawAt(x, y int, str string) {
 	y++
 	x = max(x, width)
 	y = max(y, height)
+	if c.colorDisc != "" {
+		// even radius is more symmetric
+		mult := c.radius
+		if c.breath {
+			mult *= (1 + float64(bounce(c.frame/7, 10))/15.)
+		}
+		radius := 2 * int(math.Round(mult*float64(width)/4.))
+		if radius <= height { // so something is visible
+			radius = (2 * (height + 1)) / 2
+		}
+		DrawDisc(c.ap, x-width/2-1, y-height/2-1, radius, c.colorDisc)
+	}
 	if c.boxed {
 		if c.colorBox != "" {
 			// draw box
@@ -130,6 +145,8 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
+	fColorDisc := flag.String("color-disc", "", "Color disc around the time")
+	fRadius := flag.Float64("radius", 1.2, "Radius of the disc around the time in proportion of the time width")
 	fColorBox := flag.String("color-box", "", "Color box around the time")
 	fColor := flag.String("color", "red",
 		"Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: "+tcolor.ColorHelp)
@@ -177,6 +194,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		debug:       *fDebug,
 		breath:      *fBreath,
 		colorOutput: colorOutput,
+		radius:      *fRadius,
 	}
 	if cfg.breath {
 		var black tcolor.RGBColor
@@ -200,6 +218,13 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		}
 		cfg.colorBox = colorOutput.Foreground(color)
 		cfg.boxed = true // color box implies boxed
+	}
+	if *fColorDisc != "" {
+		color, err := tcolor.FromString(*fColorDisc)
+		if err != nil {
+			return log.FErrf("Color disc error: %v", err)
+		}
+		cfg.colorDisc = colorOutput.Foreground(color)
 	}
 	ap.HideCursor()
 	ap.ClearScreen()
