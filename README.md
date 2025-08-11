@@ -57,7 +57,7 @@ brightblue, brightpurple, brightcyan, white (default "red")
         Don't blink the colon
   -no-seconds
         Don't show seconds
-  -true-color
+  -truecolor
         Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
 COLORTERM is set)
 ```
