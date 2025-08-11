@@ -49,7 +49,7 @@ func bounce(frame, maximum int) int {
 
 func breath(frame int, hsl tcolor.HSLColor) tcolor.Color {
 	n := int(hsl.L / 2)
-	hsl.L -= tcolor.Uint10(bounce(frame, n))
+	hsl.L -= tcolor.Uint10(bounce(frame, n)) //nolint:gosec // should work but TODO: assert / safecast
 	return hsl.Color()
 }
 
@@ -147,11 +147,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBreath := flag.Bool("breath", false, "Pulse the color (only works for RGB)")
 	fInverse := flag.Bool("inverse", false, "Inverse the foreground and background")
 	fDebug := flag.Bool("debug", false, "Debug mode, display mouse position and screen borders")
-	defaultTrueColor := false
-	if os.Getenv("COLORTERM") != "" {
-		defaultTrueColor = true
-	}
-	fTrueColor := flag.Bool("true-color", defaultTrueColor,
+	fTrueColor := flag.Bool("truecolor", ansipixels.DetectColorMode().TrueColor,
 		"Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if COLORTERM is set)")
 	cli.Main()
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
