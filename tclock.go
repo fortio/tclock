@@ -10,7 +10,6 @@ import (
 
 	"fortio.org/cli"
 	"fortio.org/log"
-	"fortio.org/safecast"
 	"fortio.org/tclock/bignum"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
@@ -31,13 +30,13 @@ type Config struct {
 	colorBox    string
 	inverse     bool
 	debug       bool
-	bounce      int  // bounce counter, 0 means no bouncing
-	frame       int  // frame counter for breathing effect
-	breath      bool // whether to pulse the color
-	bcolor      tcolor.RGBColor
+	bounce      int             // bounce counter, 0 means no bouncing
+	frame       int             // frame counter for breathing effect
+	breath      bool            // whether to pulse the color
+	bcolor      tcolor.HSLColor // color to use for breathing effect
 	colorOutput tcolor.ColorOutput
-	colorDisc   string  // color disc around the time, if set
-	radius      float64 // radius of the disc around the time in proportion of the time width
+	colorDisc   tcolor.HSLColor // color disc around the time, if set
+	radius      float64         // radius of the disc around the time in proportion of the time width
 }
 
 func bounce(frame, maximum int) int {
@@ -48,15 +47,10 @@ func bounce(frame, maximum int) int {
 	return 2*maximum - 1 - m
 }
 
-func breath(frame int, c tcolor.RGBColor) tcolor.Color {
-	maxi := int(max(c.R, c.G, c.B))
-	mini := 2 * maxi / 5
-	n := maxi - mini
-	x := bounce(frame, n)
-	c.R = safecast.MustConvert[uint8](max(0, int(c.R)-x))
-	c.G = safecast.MustConvert[uint8](max(0, int(c.G)-x))
-	c.B = safecast.MustConvert[uint8](max(0, int(c.B)-x))
-	return tcolor.Color{RGBColor: c}
+func breath(frame int, hsl tcolor.HSLColor) tcolor.Color {
+	n := int(hsl.L / 2)
+	hsl.L -= tcolor.Uint10(bounce(frame, n))
+	return hsl.Color()
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
@@ -92,7 +86,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 	y++
 	x = max(x, width)
 	y = max(y, height)
-	if c.colorDisc != "" {
+	if c.colorDisc.L > 0 {
 		// even radius is more symmetric
 		mult := c.radius
 		if c.breath {
@@ -197,13 +191,8 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		radius:      *fRadius,
 	}
 	if cfg.breath {
-		var black tcolor.RGBColor
-		color, err := tcolor.FromString(*fColor)
-		cfg.bcolor = color.RGBColor
-		if err != nil || cfg.bcolor == black {
-			log.Errf("Using red instead of color %v / %v", err, color)
-			cfg.bcolor = tcolor.RGBColor{R: 255, G: 20, B: 30}
-		}
+		color, _ := tcolor.FromString(*fColor)
+		cfg.bcolor = HSLColor(color)
 	} else {
 		color, err := tcolor.FromString(*fColor)
 		if err != nil {
@@ -224,7 +213,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		if err != nil {
 			return log.FErrf("Color disc error: %v", err)
 		}
-		cfg.colorDisc = colorOutput.Foreground(color)
+		cfg.colorDisc = HSLColor(color)
 	}
 	ap.HideCursor()
 	ap.ClearScreen()

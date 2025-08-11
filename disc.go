@@ -28,8 +28,15 @@ func intensity(x, y, radius int) float64 {
 	return (float64(radius) - math.Sqrt(float64(d))) / float64(2*x+2*y+2)
 }
 
-func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, color string) {
-	ap.WriteString(color)
+func HSLColor(color tcolor.Color) tcolor.HSLColor {
+	t, v := color.Decode()
+	if t == tcolor.ColorTypeBasic {
+		return tcolor.RGBColor{R: 255, G: 20, B: 30}.HSL()
+	}
+	return tcolor.ToHSL(t, v)
+}
+
+func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor) {
 	for i := -radius; i <= radius; i++ {
 		for j := -radius; j <= radius; j += 2 {
 			xx := x + i
@@ -42,13 +49,20 @@ func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, color string) {
 			if intTop == 0 && intBottom == 0 {
 				continue // skip if not in the disc
 			}
+			l := 0.75 * float64(intTop+intBottom)
+			nc := hsl
+			newL := float64(hsl.L) * l
+			nc.L = tcolor.Uint10(min(math.Round(newL), float64(nc.L)))
 			ap.MoveCursor(xx, yy)
 			switch {
 			case intTop == 1 && intBottom == 1:
+				ap.WriteString(hsl.Color().Foreground())
 				ap.WriteRune(ansipixels.FullPixel)
 			case intTop > intBottom:
+				ap.WriteString(nc.Color().Foreground())
 				ap.WriteRune(ansipixels.TopHalfPixel)
 			default: // bottom
+				ap.WriteString(nc.Color().Foreground())
 				ap.WriteRune(ansipixels.BottomHalfPixel)
 			}
 		}
