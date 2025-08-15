@@ -40,6 +40,9 @@ tclock help
 flags:
   -24
         Use 24-hour time format
+  -aliasing float
+        Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect)
+(default 0.8)
   -bounce int
         Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower,
 etc.
@@ -59,10 +62,10 @@ brightblue, brightpurple, brightcyan, white (default "red")
         Debug mode, display mouse position and screen borders
   -inverse
         Inverse the foreground and background
+  -no-black-bg
+        Don't set a black background
   -no-blink
         Don't blink the colon
-  -no-disc-bg
-        Don't fill the screen with black before drawing.
   -no-seconds
         Don't show seconds
   -radius float

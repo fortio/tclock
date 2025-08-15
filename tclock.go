@@ -11,6 +11,7 @@ import (
 	"fortio.org/cli"
 	"fortio.org/log"
 	"fortio.org/tclock/bignum"
+	"fortio.org/tclock/disc"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
@@ -38,6 +39,7 @@ type Config struct {
 	colorDisc   tcolor.HSLColor // color disc around the time, if set
 	radius      float64         // radius of the disc around the time in proportion of the time width
 	fillBlack   bool            // whether to fill the screen with black before drawing discs
+	aliasing    float64         // aliasing factor for the disc drawing
 }
 
 func bounce(frame, maximum int) int {
@@ -97,7 +99,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		DrawDisc(c.ap, x-width/2-1, y-height/2-1, radius, c.colorDisc, c.fillBlack)
+		disc.Disc(c.ap, x-width/2-1, y-height/2-1, radius, c.colorDisc, c.aliasing)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -131,6 +133,13 @@ func main() {
 	os.Exit(Main())
 }
 
+func (c *Config) ClearScreen() {
+	if c.fillBlack {
+		c.ap.WriteString(tcolor.Black.Background())
+	}
+	c.ap.ClearScreen()
+}
+
 func Main() int { //nolint:funlen // we could split the flags and rest.
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
@@ -142,7 +151,8 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
 	fColorDisc := flag.String("color-disc", "", "Color disc around the time")
 	fRadius := flag.Float64("radius", 1.2, "Radius of the disc around the time in proportion of the time width")
-	fFillBlack := flag.Bool("no-disc-bg", false, "Don't fill the screen with black before drawing.")
+	fNoFillBlack := flag.Bool("no-black-bg", false, "Don't set a black background")
+	fAliasing := flag.Float64("aliasing", 0.8, "Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect)")
 	fColorBox := flag.String("color-box", "", "Color box around the time")
 	fColor := flag.String("color", "red",
 		"Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: "+tcolor.ColorHelp)
@@ -187,11 +197,12 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		breath:      *fBreath,
 		colorOutput: colorOutput,
 		radius:      *fRadius,
-		fillBlack:   *fFillBlack,
+		fillBlack:   !*fNoFillBlack,
+		aliasing:    *fAliasing,
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
-		cfg.bcolor = HSLColor(color)
+		cfg.bcolor = disc.HSLColor(color)
 	} else {
 		color, err := tcolor.FromString(*fColor)
 		if err != nil {
@@ -212,10 +223,10 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		if err != nil {
 			return log.FErrf("Color disc error: %v", err)
 		}
-		cfg.colorDisc = HSLColor(color)
+		cfg.colorDisc = disc.HSLColor(color)
 	}
 	ap.HideCursor()
-	ap.ClearScreen()
+	cfg.ClearScreen()
 	trackMouse := false
 	bounceSpeed := *fBounce
 	bounce := (bounceSpeed > 0)
@@ -227,7 +238,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	var prevNow time.Time
 	prev := ""
 	ap.OnResize = func() error {
-		ap.ClearScreen()
+		cfg.ClearScreen()
 		cfg.DrawAt(-1, -1, TimeString(prev, false))
 		return nil
 	}
@@ -275,7 +286,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		if doDraw {
 			cfg.frame++
 			ap.StartSyncMode()
-			ap.ClearScreen()
+			cfg.ClearScreen()
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
 			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))

@@ -1,8 +1,7 @@
-package main
+package disc
 
 import (
 	"math"
-	"strings"
 
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
@@ -15,7 +14,7 @@ func abs(x int) int {
 	return x
 }
 
-func intensity(x, y, radius int) float64 {
+func intensity(x, y, radius int, aliasing float64) float64 {
 	r := float64(radius * radius)
 	fx := float64(abs(x)) + 0.5
 	fy := float64(abs(y)) + 0.5
@@ -24,10 +23,10 @@ func intensity(x, y, radius int) float64 {
 		return 0
 	}
 	edgeDistance := math.Sqrt(r - d)
-	if edgeDistance > 0.8*float64(radius) {
+	if edgeDistance > aliasing*float64(radius) {
 		return 1 // full intensity
 	}
-	return edgeDistance / float64(radius) / 0.8
+	return edgeDistance / float64(radius) / aliasing
 }
 
 func HSLColor(color tcolor.Color) tcolor.HSLColor {
@@ -38,15 +37,9 @@ func HSLColor(color tcolor.Color) tcolor.HSLColor {
 	return tcolor.ToHSL(t, v)
 }
 
-func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor, fillBlack bool) {
-	if fillBlack {
-		// black background on all lines
-		for j := range ap.H {
-			ap.MoveCursor(0, j)
-			ap.WriteString(tcolor.Black.Background())
-			ap.WriteString(strings.Repeat(" ", ap.W))
-		}
-	}
+// Draws disc/sphere. aliasing is 0.0 to 1.0 fraction of the disc which is anti-aliased.
+// Smaller aliasing the sharper the edge. Larger aliasing the more sphere like effect.
+func Disc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor, aliasing float64) {
 	tcolOut := tcolor.ColorOutput{TrueColor: ap.TrueColor}
 	for j := -radius; j <= radius; j += 2 {
 		first := true
@@ -57,8 +50,8 @@ func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor, 
 			if xx < 0 || yy < 0 || xx >= ap.W || yy >= ap.H {
 				continue // skip out of bounds
 			}
-			intTop := intensity(i, j, radius)
-			intBottom := intensity(i, j+1, radius)
+			intTop := intensity(i, j, radius, aliasing)
+			intBottom := intensity(i, j+1, radius, aliasing)
 			if intTop == 0 && intBottom == 0 {
 				continue // skip if not in the disc
 			}
@@ -68,10 +61,10 @@ func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor, 
 			}
 			if intTop == 1 && intBottom == 1 {
 				if !inside {
-					ap.WriteString(tcolOut.Foreground(hsl.Color()))
+					ap.WriteString(tcolOut.Background(hsl.Color()))
 					inside = true
 				}
-				ap.WriteRune(ansipixels.FullPixel)
+				ap.WriteRune(' ')
 				continue
 			}
 			newTopL := float64(hsl.L) * intTop
