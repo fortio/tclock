@@ -4,7 +4,7 @@
 # tclock
 Terminal Clock using Ansipixels library
 
-`tclock` is a simple terminal/TUI clock (well for now just big numbers printer).
+`tclock` is a terminal/TUI digital big clock.
 
 ![Example Screen Shot](screenshot.png)
 
