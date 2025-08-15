@@ -6,6 +6,9 @@ Terminal Clock using Ansipixels library
 
 `tclock` is a simple terminal/TUI clock (well for now just big numbers printer).
 
+![Example Screen Shot](screenshot.png)
+
+
 ## Install
 You can get the binary from [releases](https://github.com/fortio/tclock/releases)
 
@@ -28,7 +31,7 @@ brew install fortio/tap/tclock
 ## Run
 
 Move the mouse to place the clock, click to leave it there, click again to put it somewhere else.
-Change the color (can be specified by name, RRGGBB or Hue,Sat,Luminance in [0,1] range), draw boxes around, etc.. with flags.
+Change the color (can be specified by name, RRGGBB or Hue,Sat,Luminance in [0,1] range), draw boxes, discs around, etc.. with flags.
 
 ```sh
 tclock help
@@ -38,7 +41,8 @@ flags:
   -24
         Use 24-hour time format
   -bounce int
-        Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.
+        Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower,
+etc.
   -box
         Draw a simple rounded corner outline around the time
   -breath
@@ -49,23 +53,29 @@ yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brig
 brightblue, brightpurple, brightcyan, white (default "red")
   -color-box string
         Color box around the time
+  -color-disc string
+        Color disc around the time
   -debug
         Debug mode, display mouse position and screen borders
   -inverse
         Inverse the foreground and background
   -no-blink
         Don't blink the colon
+  -no-disc-bg
+        Don't fill the screen with black before drawing.
   -no-seconds
         Don't show seconds
+  -radius float
+        Radius of the disc around the time in proportion of the time width (default 1.2)
   -truecolor
         Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
-COLORTERM is set)
+COLORTERM is set) (default true)
 ```
 
 ```sh
 $ tclock
 ```
-
+Can be as simple as this:
 ```
          ╭────────────────────────────────────╮
          │      ━━      ━━   ━━      ━━   ━━  │
@@ -76,3 +86,4 @@ $ tclock
          ╰────────────────────────────────────╯
 
 ```
+or as fancy as breathing version of the screenshot above.

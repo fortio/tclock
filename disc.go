@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	"strings"
 
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
@@ -15,17 +16,18 @@ func abs(x int) int {
 }
 
 func intensity(x, y, radius int) float64 {
-	x = abs(x)
-	y = abs(y)
-	r := radius * radius
-	d := x*x + y*y
+	r := float64(radius * radius)
+	fx := float64(abs(x)) + 0.5
+	fy := float64(abs(y)) + 0.5
+	d := fx*fx + fy*fy
 	if d > r {
 		return 0
 	}
-	if (x-1)*(x-1)+(y-1)*(y-1) < r {
-		return 1
+	edgeDistance := math.Sqrt(r - d)
+	if edgeDistance > 0.8*float64(radius) {
+		return 1 // full intensity
 	}
-	return (float64(radius) - math.Sqrt(float64(d))) / float64(2*x+2*y+2)
+	return edgeDistance / float64(radius) / 0.8
 }
 
 func HSLColor(color tcolor.Color) tcolor.HSLColor {
@@ -36,9 +38,20 @@ func HSLColor(color tcolor.Color) tcolor.HSLColor {
 	return tcolor.ToHSL(t, v)
 }
 
-func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor) {
-	for i := -radius; i <= radius; i++ {
-		for j := -radius; j <= radius; j += 2 {
+func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor, fillBlack bool) {
+	if fillBlack {
+		// black background on all lines
+		for j := range ap.H {
+			ap.MoveCursor(0, j)
+			ap.WriteString(tcolor.Black.Background())
+			ap.WriteString(strings.Repeat(" ", ap.W))
+		}
+	}
+	tcolOut := tcolor.ColorOutput{TrueColor: ap.TrueColor}
+	for j := -radius; j <= radius; j += 2 {
+		first := true
+		inside := false
+		for i := -radius; i <= radius; i++ {
 			xx := x + i
 			yy := y + j/2
 			if xx < 0 || yy < 0 || xx >= ap.W || yy >= ap.H {
@@ -49,22 +62,27 @@ func DrawDisc(ap *ansipixels.AnsiPixels, x, y, radius int, hsl tcolor.HSLColor) 
 			if intTop == 0 && intBottom == 0 {
 				continue // skip if not in the disc
 			}
-			l := 0.75 * float64(intTop+intBottom)
-			nc := hsl
-			newL := float64(hsl.L) * l
-			nc.L = tcolor.Uint10(min(math.Round(newL), float64(nc.L)))
-			ap.MoveCursor(xx, yy)
-			switch {
-			case intTop == 1 && intBottom == 1:
-				ap.WriteString(hsl.Color().Foreground())
-				ap.WriteRune(ansipixels.FullPixel)
-			case intTop > intBottom:
-				ap.WriteString(nc.Color().Foreground())
-				ap.WriteRune(ansipixels.TopHalfPixel)
-			default: // bottom
-				ap.WriteString(nc.Color().Foreground())
-				ap.WriteRune(ansipixels.BottomHalfPixel)
+			if first {
+				ap.MoveCursor(xx, yy)
+				first = false
 			}
+			if intTop == 1 && intBottom == 1 {
+				if !inside {
+					ap.WriteString(tcolOut.Foreground(hsl.Color()))
+					inside = true
+				}
+				ap.WriteRune(ansipixels.FullPixel)
+				continue
+			}
+			newTopL := float64(hsl.L) * intTop
+			newBottomL := float64(hsl.L) * intBottom
+			ncTop := hsl
+			ncTop.L = tcolor.Uint10(math.Round(newTopL))
+			ncBottom := hsl
+			ncBottom.L = tcolor.Uint10(math.Round(newBottomL))
+			ap.WriteString(tcolOut.Background(ncTop.Color()))
+			ap.WriteString(tcolOut.Foreground(ncBottom.Color()))
+			ap.WriteRune(ansipixels.BottomHalfPixel)
 		}
 	}
 	ap.WriteString(tcolor.Reset)

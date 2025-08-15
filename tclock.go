@@ -37,6 +37,7 @@ type Config struct {
 	colorOutput tcolor.ColorOutput
 	colorDisc   tcolor.HSLColor // color disc around the time, if set
 	radius      float64         // radius of the disc around the time in proportion of the time width
+	fillBlack   bool            // whether to fill the screen with black before drawing discs
 }
 
 func bounce(frame, maximum int) int {
@@ -96,7 +97,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		DrawDisc(c.ap, x-width/2-1, y-height/2-1, radius, c.colorDisc)
+		DrawDisc(c.ap, x-width/2-1, y-height/2-1, radius, c.colorDisc, c.fillBlack)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -141,6 +142,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
 	fColorDisc := flag.String("color-disc", "", "Color disc around the time")
 	fRadius := flag.Float64("radius", 1.2, "Radius of the disc around the time in proportion of the time width")
+	fFillBlack := flag.Bool("no-disc-bg", false, "Don't fill the screen with black before drawing.")
 	fColorBox := flag.String("color-box", "", "Color box around the time")
 	fColor := flag.String("color", "red",
 		"Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: "+tcolor.ColorHelp)
@@ -185,6 +187,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		breath:      *fBreath,
 		colorOutput: colorOutput,
 		radius:      *fRadius,
+		fillBlack:   *fFillBlack,
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
@@ -242,7 +245,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 			return 0 // exit on 'q' or Ctrl-C
 		}
 		// Click to place the time at the mouse position (or switch back to move with mouse).
-		if ap.LeftClick() {
+		if ap.LeftClick() && ap.MouseRelease() {
 			trackMouse = !trackMouse
 		}
 		doDraw := cfg.breath
