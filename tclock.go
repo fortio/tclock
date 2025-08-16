@@ -11,7 +11,6 @@ import (
 	"fortio.org/cli"
 	"fortio.org/log"
 	"fortio.org/tclock/bignum"
-	"fortio.org/tclock/disc"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
@@ -99,7 +98,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		disc.Disc(c.ap, x-width/2-1, y-height/2-1, radius, c.colorDisc, c.aliasing)
+		c.ap.Disc(x-width/2-1, y-height/2-1, radius, c.colorDisc, c.aliasing)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -122,7 +121,10 @@ func (c *Config) DrawAt(x, y int, str string) {
 	if c.inverse {
 		prefix = ansipixels.Inverse + c.color
 	}
-	suffix := ansipixels.Reset
+	suffix := ""
+	if !c.fillBlack {
+		suffix = ansipixels.Reset
+	}
 	for i, line := range lines {
 		c.ap.WriteAtStr(x-width, y-height+i, prefix+line+suffix)
 	}
@@ -138,6 +140,14 @@ func (c *Config) ClearScreen() {
 		c.ap.WriteString(tcolor.Black.Background())
 	}
 	c.ap.ClearScreen()
+}
+
+func HSLColor(color tcolor.Color) tcolor.HSLColor {
+	t, v := color.Decode()
+	if t == tcolor.ColorTypeBasic || t == tcolor.ColorType256 {
+		return tcolor.RGBColor{R: 255, G: 20, B: 30}.HSL()
+	}
+	return tcolor.ToHSL(t, v)
 }
 
 func Main() int { //nolint:funlen // we could split the flags and rest.
@@ -202,7 +212,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
-		cfg.bcolor = disc.HSLColor(color)
+		cfg.bcolor = HSLColor(color)
 	} else {
 		color, err := tcolor.FromString(*fColor)
 		if err != nil {
@@ -223,7 +233,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		if err != nil {
 			return log.FErrf("Color disc error: %v", err)
 		}
-		cfg.colorDisc = disc.HSLColor(color)
+		cfg.colorDisc = HSLColor(color)
 	}
 	ap.HideCursor()
 	cfg.ClearScreen()
