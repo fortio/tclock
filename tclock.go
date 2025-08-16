@@ -121,7 +121,10 @@ func (c *Config) DrawAt(x, y int, str string) {
 	if c.inverse {
 		prefix = ansipixels.Inverse + c.color
 	}
-	suffix := ansipixels.Reset
+	suffix := ""
+	if !c.fillBlack {
+		suffix = ansipixels.Reset
+	}
 	for i, line := range lines {
 		c.ap.WriteAtStr(x-width, y-height+i, prefix+line+suffix)
 	}
