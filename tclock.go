@@ -39,7 +39,7 @@ type Config struct {
 	radius      float64         // radius of the disc around the time in proportion of the time width
 	fillBlack   bool            // whether to fill the screen with black before drawing discs
 	aliasing    float64         // aliasing factor for the disc drawing
-	blackBG     string
+	blackBG     string          // ANSI sequence for the black background: either 16 basic (color 0) or RGB black (truecolor).
 }
 
 func bounce(frame, maximum int) int {
