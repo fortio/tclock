@@ -39,6 +39,7 @@ type Config struct {
 	radius      float64         // radius of the disc around the time in proportion of the time width
 	fillBlack   bool            // whether to fill the screen with black before drawing discs
 	aliasing    float64         // aliasing factor for the disc drawing
+	blackBG     string
 }
 
 func bounce(frame, maximum int) int {
@@ -122,7 +123,9 @@ func (c *Config) DrawAt(x, y int, str string) {
 		prefix = ansipixels.Inverse + c.color
 	}
 	suffix := ""
-	if !c.fillBlack {
+	if c.fillBlack {
+		prefix += c.blackBG
+	} else {
 		suffix = ansipixels.Reset
 	}
 	for i, line := range lines {
@@ -137,7 +140,7 @@ func main() {
 
 func (c *Config) ClearScreen() {
 	if c.fillBlack {
-		c.ap.WriteString(tcolor.Black.Background())
+		c.ap.WriteString(c.blackBG)
 	}
 	c.ap.ClearScreen()
 }
@@ -209,6 +212,12 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		radius:      *fRadius,
 		fillBlack:   !*fNoFillBlack,
 		aliasing:    *fAliasing,
+	}
+	if cfg.ap.TrueColor {
+		cfg.blackBG = tcolor.RGBColor{}.Background()
+	} else {
+		var black tcolor.Color256
+		cfg.blackBG = black.Background()
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
