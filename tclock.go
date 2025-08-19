@@ -216,8 +216,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	if cfg.ap.TrueColor {
 		cfg.blackBG = tcolor.RGBColor{}.Background()
 	} else {
-		var black tcolor.Color256
-		cfg.blackBG = black.Background()
+		cfg.blackBG = tcolor.Black.Background()
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
