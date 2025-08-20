@@ -33,14 +33,15 @@ type Config struct {
 	bounce      int             // bounce counter, 0 means no bouncing
 	frame       int             // frame counter for breathing effect
 	breath      bool            // whether to pulse the color
-	bcolor      tcolor.HSLColor // color to use for breathing effect
+	bcolor      tcolor.RGBColor // color to use for breathing effect
 	colorOutput tcolor.ColorOutput
-	colorDisc   tcolor.HSLColor // color disc around the time, if set
+	colorDisc   tcolor.RGBColor // color disc around the time, if set
 	radius      float64         // radius of the disc around the time in proportion of the time width
 	fillBlack   bool            // whether to fill the screen with black before drawing discs
 	aliasing    float64         // aliasing factor for the disc drawing
 	blackBG     string          // ANSI sequence for the black background: either 16 basic (color 0) or RGB black (truecolor).
-	linear      bool            // whether to use linear blending for the color disc (instead of SRGB)
+	// whether to use linear blending for the color disc (instead of SRGB)
+	blendingFunction func(tcolor.RGBColor, tcolor.RGBColor, float64) tcolor.RGBColor
 }
 
 func bounce(frame, maximum int) int {
@@ -51,10 +52,10 @@ func bounce(frame, maximum int) int {
 	return 2*maximum - 1 - m
 }
 
-func breath(frame int, hsl tcolor.HSLColor) tcolor.Color {
-	n := int(hsl.L / 2)
-	hsl.L -= tcolor.Uint10(bounce(frame, n)) //nolint:gosec // should work but TODO: assert / safecast
-	return hsl.Color()
+func (c *Config) breathColor() tcolor.Color {
+	spread := 100
+	alpha := 0.15 + 0.85*float64(bounce(c.frame, spread))/float64(spread)
+	return c.blendingFunction(c.ap.Background, c.bcolor, alpha).Color()
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
@@ -90,7 +91,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 	y++
 	x = max(x, width)
 	y = max(y, height)
-	if c.colorDisc.L > 0 {
+	if c.colorDisc != (tcolor.RGBColor{}) {
 		// even radius is more symmetric
 		mult := c.radius
 		if c.breath {
@@ -100,11 +101,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		if c.linear {
-			c.ap.DiscLinear(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc.RGB(), c.aliasing)
-		} else {
-			c.ap.DiscSRGB(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc.RGB(), c.aliasing)
-		}
+		c.ap.DiscBlendFN(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -122,7 +119,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 	// draw the digits
 	prefix := c.color
 	if c.breath {
-		prefix = c.colorOutput.Foreground(breath(c.frame, c.bcolor))
+		prefix = c.colorOutput.Foreground(c.breathColor())
 	}
 	if c.inverse {
 		prefix = ansipixels.Inverse + c.color
@@ -150,12 +147,12 @@ func (c *Config) ClearScreen() {
 	c.ap.ClearScreen()
 }
 
-func HSLColor(color tcolor.Color) tcolor.HSLColor {
+func RGBColor(color tcolor.Color) tcolor.RGBColor {
 	t, v := color.Decode()
 	if t == tcolor.ColorTypeBasic || t == tcolor.ColorType256 {
-		return tcolor.RGBColor{R: 255, G: 20, B: 30}.HSL()
+		return tcolor.RGBColor{R: 255, G: 20, B: 30}
 	}
-	return tcolor.ToHSL(t, v)
+	return tcolor.ToRGB(t, v)
 }
 
 func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags and rest.
@@ -223,7 +220,11 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 		radius:      *fRadius,
 		fillBlack:   *fFillBlack,
 		aliasing:    *fAliasing,
-		linear:      *fLinearBlending,
+	}
+	if *fLinearBlending {
+		cfg.blendingFunction = ansipixels.BlendL
+	} else {
+		cfg.blendingFunction = ansipixels.Blend
 	}
 	if cfg.ap.TrueColor {
 		cfg.blackBG = tcolor.RGBColor{}.Background()
@@ -232,7 +233,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
-		cfg.bcolor = HSLColor(color)
+		cfg.bcolor = RGBColor(color)
 	} else {
 		color, err := tcolor.FromString(*fColor)
 		if err != nil {
@@ -253,7 +254,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 		if err != nil {
 			return log.FErrf("Color disc error: %v", err)
 		}
-		cfg.colorDisc = HSLColor(color)
+		cfg.colorDisc = RGBColor(color)
 	}
 	ap.HideCursor()
 	cfg.ClearScreen()
