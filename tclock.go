@@ -222,9 +222,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 		aliasing:    *fAliasing,
 	}
 	if *fLinearBlending {
-		cfg.blendingFunction = ansipixels.BlendL
+		cfg.blendingFunction = ansipixels.BlendLinear
 	} else {
-		cfg.blendingFunction = ansipixels.Blend
+		cfg.blendingFunction = ansipixels.BlendSRGB
 	}
 	if cfg.ap.TrueColor {
 		cfg.blackBG = tcolor.RGBColor{}.Background()
