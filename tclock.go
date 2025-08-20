@@ -99,7 +99,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		c.ap.Disc(x-width/2-1, y-height/2-1, radius, c.colorDisc, c.aliasing)
+		c.ap.DiscSRGB(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc.RGB(), c.aliasing)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -164,7 +164,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
 	fColorDisc := flag.String("color-disc", "", "Color disc around the time")
 	fRadius := flag.Float64("radius", 1.2, "Radius of the disc around the time in proportion of the time width")
-	fNoFillBlack := flag.Bool("no-black-bg", false, "Don't set a black background")
+	fFillBlack := flag.Bool("black-bg", false, "Set a black background instead of using the terminal's background")
 	fAliasing := flag.Float64("aliasing", 0.8, "Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect)")
 	fColorBox := flag.String("color-box", "", "Color box around the time")
 	fColor := flag.String("color", "red",
@@ -210,7 +210,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		breath:      *fBreath,
 		colorOutput: colorOutput,
 		radius:      *fRadius,
-		fillBlack:   !*fNoFillBlack,
+		fillBlack:   *fFillBlack,
 		aliasing:    *fAliasing,
 	}
 	if cfg.ap.TrueColor {
@@ -265,6 +265,11 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	// TODO: how to get initial mouse position?
 	x, y := ap.Mx, ap.My
 	frame := 0
+	if *fFillBlack {
+		ap.Background = tcolor.RGBColor{}
+	} else {
+		ap.SyncBackgroundColor()
+	}
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {

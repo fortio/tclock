@@ -62,8 +62,8 @@ brightblue, brightpurple, brightcyan, white (default "red")
         Debug mode, display mouse position and screen borders
   -inverse
         Inverse the foreground and background
-  -no-black-bg
-        Don't set a black background
+  -black-bg
+        Set a black background instead of using the terminal's background
   -no-blink
         Don't blink the colon
   -no-seconds
@@ -90,3 +90,8 @@ Can be as simple as this:
 
 ```
 or as fancy as breathing version of the screenshot above.
+
+Try
+```
+tclock -color-disc E0C020 -breath
+```
