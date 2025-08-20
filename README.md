@@ -38,32 +38,33 @@ tclock help
 ```
 ```
 flags:
+flags:
   -24
         Use 24-hour time format
   -aliasing float
-        Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect)
-(default 0.8)
+        Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect) (default 0.8)
+  -black-bg
+        Set a black background instead of using the terminal's background
   -bounce int
-        Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower,
-etc.
+        Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.
   -box
         Draw a simple rounded corner outline around the time
   -breath
         Pulse the color (only works for RGB)
   -color string
         Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: none, black, red, green,
-yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brightyellow,
-brightblue, brightpurple, brightcyan, white (default "red")
+        yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen,
+        brightyellow, brightblue, brightpurple, brightcyan, white (default "red")
   -color-box string
         Color box around the time
   -color-disc string
-        Color disc around the time
+        Color disc around the time, use "" to remove (default "E0C020")
   -debug
         Debug mode, display mouse position and screen borders
   -inverse
         Inverse the foreground and background
-  -no-black-bg
-        Don't set a black background
+  -linear
+        Use linear blending for the color disc (more sphere like)
   -no-blink
         Don't blink the colon
   -no-seconds
@@ -71,8 +72,8 @@ brightblue, brightpurple, brightcyan, white (default "red")
   -radius float
         Radius of the disc around the time in proportion of the time width (default 1.2)
   -truecolor
-        Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
-COLORTERM is set) (default true)
+        Use true color (24-bit RGB) instead of 8-bit ANSI colors
+        (default is true if COLORTERM is set)
 ```
 
 ```sh
@@ -90,3 +91,14 @@ Can be as simple as this:
 
 ```
 or as fancy as breathing version of the screenshot above.
+
+Try
+```sh
+tclock -breath
+# or
+tclock -bounce 1
+# or minimal
+tclock -color-disc ""
+# This is nice to try too:
+tclock -color-disc "" -breath -linear
+```
