@@ -98,5 +98,7 @@ tclock -breath
 # or
 tclock -bounce 1
 # or minimal
-tclock -disc-color ""
+tclock -color-disc ""
+# This is nice to try too:
+tclock -color-disc "" -breath -linear
 ```
