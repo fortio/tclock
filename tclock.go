@@ -40,6 +40,7 @@ type Config struct {
 	fillBlack   bool            // whether to fill the screen with black before drawing discs
 	aliasing    float64         // aliasing factor for the disc drawing
 	blackBG     string          // ANSI sequence for the black background: either 16 basic (color 0) or RGB black (truecolor).
+	linear      bool            // whether to use linear blending for the color disc (instead of SRGB)
 }
 
 func bounce(frame, maximum int) int {
@@ -99,7 +100,11 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		c.ap.DiscSRGB(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc.RGB(), c.aliasing)
+		if c.linear {
+			c.ap.DiscLinear(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc.RGB(), c.aliasing)
+		} else {
+			c.ap.DiscSRGB(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc.RGB(), c.aliasing)
+		}
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -153,7 +158,12 @@ func HSLColor(color tcolor.Color) tcolor.HSLColor {
 	return tcolor.ToHSL(t, v)
 }
 
-func Main() int { //nolint:funlen // we could split the flags and rest.
+func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags and rest.
+	truecolorDefault := ansipixels.DetectColorMode().TrueColor
+	discDefault := "E0C020"
+	if !truecolorDefault {
+		discDefault = "FFFFFF"
+	}
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
 	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
@@ -162,7 +172,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
-	fColorDisc := flag.String("color-disc", "", "Color disc around the time")
+	fColorDisc := flag.String("color-disc", discDefault, "Color disc around the time, use \"\" to remove")
 	fRadius := flag.Float64("radius", 1.2, "Radius of the disc around the time in proportion of the time width")
 	fFillBlack := flag.Bool("black-bg", false, "Set a black background instead of using the terminal's background")
 	fAliasing := flag.Float64("aliasing", 0.8, "Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect)")
@@ -172,8 +182,9 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 	fBreath := flag.Bool("breath", false, "Pulse the color (only works for RGB)")
 	fInverse := flag.Bool("inverse", false, "Inverse the foreground and background")
 	fDebug := flag.Bool("debug", false, "Debug mode, display mouse position and screen borders")
-	fTrueColor := flag.Bool("truecolor", ansipixels.DetectColorMode().TrueColor,
+	fTrueColor := flag.Bool("truecolor", truecolorDefault,
 		"Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if COLORTERM is set)")
+	fLinearBlending := flag.Bool("linear", false, "Use linear blending for the color disc (more sphere like)")
 	cli.Main()
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	var numStr string
@@ -212,6 +223,7 @@ func Main() int { //nolint:funlen // we could split the flags and rest.
 		radius:      *fRadius,
 		fillBlack:   *fFillBlack,
 		aliasing:    *fAliasing,
+		linear:      *fLinearBlending,
 	}
 	if cfg.ap.TrueColor {
 		cfg.blackBG = tcolor.RGBColor{}.Background()
