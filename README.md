@@ -93,6 +93,10 @@ Can be as simple as this:
 or as fancy as breathing version of the screenshot above.
 
 Try
-```
-tclock -color-disc E0C020 -breath
+```sh
+tclock -breath
+# or
+tclock -bounce 1
+# or minimal
+tclock -disc-color ""
 ```
