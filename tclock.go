@@ -98,7 +98,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		x = width - 1 + bounceDisc(c.bounce, c.ap.W-width-(radius/3), radius/2) + radius/2
+		x = width - 1 + bounceDisc(c.bounce, c.ap.W-width-(radius/3), radius/2) + radius/2 // I had thought doing radius/2 would make it cleanly hit the edge, but it seems to work better with radius / 3 ?
 		y = height - 1 + bounceDisc(c.bounce, c.ap.H-height-(radius/3), radius/2) + radius/2
 	}
 	// draw from bottom right corner
