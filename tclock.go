@@ -51,6 +51,13 @@ func bounce(frame, maximum int) int {
 	}
 	return 2*maximum - 1 - m
 }
+func bounceDisc(frame, maximum, radius int) int {
+	m := frame % (2 * (maximum - radius))
+	if m < maximum-radius {
+		return m
+	}
+	return 2*(maximum-radius) - 1 - m
+}
 
 func (c *Config) breathColor() tcolor.Color {
 	spread := 100
@@ -83,8 +90,16 @@ func (c *Config) DrawAt(x, y int, str string) {
 	x = min(x, c.ap.W-1)
 	y = min(y, c.ap.H-1)
 	if c.bounce != 0 {
-		x = width - 1 + bounce(c.bounce, c.ap.W-width+1)
-		y = height - 1 + bounce(c.bounce, c.ap.H-height+1)
+		mult := c.radius
+		if c.breath {
+			mult *= (1 + float64(bounce(c.frame/7, 10))/15.)
+		}
+		radius := 2 * int(math.Round(mult*float64(width)/4.))
+		if radius <= height { // so something is visible
+			radius = (2 * (height + 1)) / 2
+		}
+		x = width - 1 + bounceDisc(c.bounce, c.ap.W-width-(radius/3), radius/2) + radius/2
+		y = height - 1 + bounceDisc(c.bounce, c.ap.H-height-(radius/3), radius/2) + radius/2
 	}
 	// draw from bottom right corner
 	x++
