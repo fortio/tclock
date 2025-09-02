@@ -155,7 +155,7 @@ func RGBColor(color tcolor.Color) tcolor.RGBColor {
 	return tcolor.ToRGB(t, v)
 }
 
-func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags and rest.
+func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split the flags and rest.
 	truecolorDefault := ansipixels.DetectColorMode().TrueColor
 	discDefault := "E0C020"
 	if !truecolorDefault {
@@ -182,6 +182,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 	fTrueColor := flag.Bool("truecolor", truecolorDefault,
 		"Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if COLORTERM is set)")
 	fLinearBlending := flag.Bool("linear", false, "Use linear blending for the color disc (more sphere like)")
+	fCountdown := flag.Duration("countdown", 0, "If > 0, countdown from this duration instead of showing the time")
 	cli.Main()
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	var numStr string
@@ -189,6 +190,13 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 		numStr = flag.Arg(0)
 		fmt.Println(TimeString(numStr, false))
 		return 0
+	}
+	countDown := false
+	var end time.Time
+	if *fCountdown > 0 {
+		countDown = true
+		end = time.Now().Add(*fCountdown)
+		*f24 = true // countdown is always 24h (00 and not 12 when no hours)
 	}
 	format := "3:04"
 	if *f24 {
@@ -297,7 +305,11 @@ func Main() int { //nolint:funlen,gocognit,gocyclo // we could split the flags a
 		}
 		doDraw := cfg.breath
 		now := time.Now()
-		numStr = now.Format(format)
+		if countDown {
+			numStr = time.Time{}.Add((end.Sub(now))).Format(format)
+		} else {
+			numStr = now.Format(format)
+		}
 		if numStr != prev {
 			doDraw = true
 		}

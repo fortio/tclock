@@ -37,8 +37,6 @@ Change the color (can be specified by name, RRGGBB or Hue,Sat,Luminance in [0,1]
 tclock help
 ```
 ```
-flags:
-flags:
   -24
         Use 24-hour time format
   -aliasing float
@@ -53,12 +51,14 @@ flags:
         Pulse the color (only works for RGB)
   -color string
         Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: none, black, red, green,
-        yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen,
-        brightyellow, brightblue, brightpurple, brightcyan, white (default "red")
+      yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brightyellow,
+      brightblue, brightpurple, brightcyan, white (default "red")
   -color-box string
         Color box around the time
   -color-disc string
-        Color disc around the time, use "" to remove (default "E0C020")
+        Color disc around the time, use "" to remove (default "FFFFFF")
+  -countdown duration
+        If > 0, countdown from this duration instead of showing the time
   -debug
         Debug mode, display mouse position and screen borders
   -inverse
@@ -72,8 +72,8 @@ flags:
   -radius float
         Radius of the disc around the time in proportion of the time width (default 1.2)
   -truecolor
-        Use true color (24-bit RGB) instead of 8-bit ANSI colors
-        (default is true if COLORTERM is set)
+        Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
+      COLORTERM is set)
 ```
 
 ```sh
