@@ -176,7 +176,7 @@ func DurationDDHHMM(duration time.Duration) string {
 		days := int(duration.Hours()) / 24
 		return fmt.Sprintf("%02d:%02d:%02d", days, hours, minutes)
 	}
-	if duration > time.Hour {
+	if duration >= time.Hour {
 		return fmt.Sprintf("%02d:%02d", hours, minutes)
 	}
 	return fmt.Sprintf("%02d", minutes)
