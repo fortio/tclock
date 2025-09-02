@@ -37,6 +37,7 @@ Change the color (can be specified by name, RRGGBB or Hue,Sat,Luminance in [0,1]
 tclock help
 ```
 ```
+flags:
   -24
         Use 24-hour time format
   -aliasing float
@@ -56,7 +57,7 @@ tclock help
   -color-box string
         Color box around the time
   -color-disc string
-        Color disc around the time, use "" to remove (default "FFFFFF")
+        Color disc around the time, use "" to remove (default "E0C020")
   -countdown duration
         If > 0, countdown from this duration instead of showing the time
   -debug
