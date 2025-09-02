@@ -211,8 +211,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		fmt.Fprintf(os.Stderr, "Error opening terminal: %v\n", err)
 		os.Exit(1)
 	}
+	extraNewLinesAtEnd := true
 	defer func() {
-		if !countDown {
+		if extraNewLinesAtEnd {
 			fmt.Fprintf(ap.Out, "\r\n\n\n\n")
 		}
 		ap.ShowCursor()
@@ -311,6 +312,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 			left := end.Sub(now)
 			if left <= 0 {
 				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(format))
+				extraNewLinesAtEnd = false
 				return 0
 			}
 			numStr = time.Time{}.Add(left).Format(format)
