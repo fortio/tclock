@@ -212,7 +212,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		os.Exit(1)
 	}
 	defer func() {
-		fmt.Fprintf(ap.Out, "\r\n\n\n\n")
+		if !countDown {
+			fmt.Fprintf(ap.Out, "\r\n\n\n\n")
+		}
 		ap.ShowCursor()
 		ap.MouseTrackingOff()
 		ap.EndSyncMode()
@@ -306,7 +308,12 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		doDraw := cfg.breath
 		now := time.Now()
 		if countDown {
-			numStr = time.Time{}.Add((end.Sub(now))).Format(format)
+			left := end.Sub(now)
+			if left <= 0 {
+				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(format))
+				return 0
+			}
+			numStr = time.Time{}.Add(left).Format(format)
 		} else {
 			numStr = now.Format(format)
 		}
