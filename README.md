@@ -72,6 +72,9 @@ flags:
         Don't show seconds
   -radius float
         Radius of the disc around the time in proportion of the time width (default 1.2)
+  -text string
+        Text to display below the clock (during countdown will be the target time, use
+      none for no extra text)
   -truecolor
         Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
       COLORTERM is set)
