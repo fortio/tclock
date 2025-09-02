@@ -42,6 +42,8 @@ type Config struct {
 	blackBG     string          // ANSI sequence for the black background: either 16 basic (color 0) or RGB black (truecolor).
 	// whether to use linear blending for the color disc (instead of SRGB)
 	blendingFunction func(tcolor.RGBColor, tcolor.RGBColor, float64) tcolor.RGBColor
+	// Extra text (countdown)
+	text string
 }
 
 func bounce(frame, maximum int) int {
@@ -133,6 +135,10 @@ func (c *Config) DrawAt(x, y int, str string) {
 	for i, line := range lines {
 		c.ap.WriteAtStr(x-width, y-height+i, prefix+line+suffix)
 	}
+	if c.text != "" {
+		center := x - width/2 - c.ap.ScreenWidth(c.text)/2 - 1
+		c.ap.WriteAtStr(center, y+1, c.text)
+	}
 	// ap.MoveCursor(x-1, y-1)
 }
 
@@ -153,6 +159,27 @@ func RGBColor(color tcolor.Color) tcolor.RGBColor {
 		return tcolor.RGBColor{R: 255, G: 20, B: 30}
 	}
 	return tcolor.ToRGB(t, v)
+}
+
+func DurationString(duration time.Duration, withSeconds bool) string {
+	str := DurationDDHHMM(duration)
+	if withSeconds {
+		str += fmt.Sprintf(":%02d", int(duration.Seconds())%60)
+	}
+	return str
+}
+
+func DurationDDHHMM(duration time.Duration) string {
+	minutes := int(duration.Minutes()) % 60
+	hours := int(duration.Hours()) % 24
+	if duration >= 24*time.Hour {
+		days := int(duration.Hours()) / 24
+		return fmt.Sprintf("%02d:%02d:%02d", days, hours, minutes)
+	}
+	if duration > time.Hour {
+		return fmt.Sprintf("%02d:%02d", hours, minutes)
+	}
+	return fmt.Sprintf("%02d", minutes)
 }
 
 func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split the flags and rest.
@@ -183,6 +210,8 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if COLORTERM is set)")
 	fLinearBlending := flag.Bool("linear", false, "Use linear blending for the color disc (more sphere like)")
 	fCountdown := flag.Duration("countdown", 0, "If > 0, countdown from this duration instead of showing the time")
+	fText := flag.String("text", "",
+		"Text to display below the clock (during countdown will be the target time, use none for no extra text)")
 	cli.Main()
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	var numStr string
@@ -190,13 +219,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		numStr = flag.Arg(0)
 		fmt.Println(TimeString(numStr, false))
 		return 0
-	}
-	countDown := false
-	var end time.Time
-	if *fCountdown > 0 {
-		countDown = true
-		end = time.Now().Add(*fCountdown)
-		*f24 = true // countdown is always 24h (00 and not 12 when no hours)
 	}
 	format := "3:04"
 	if *f24 {
@@ -231,6 +253,23 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		radius:      *fRadius,
 		fillBlack:   *fFillBlack,
 		aliasing:    *fAliasing,
+	}
+	showText := *fText != "none"
+	if showText {
+		cfg.text = *fText
+	}
+	countDown := false
+	var end time.Time
+	if *fCountdown > 0 {
+		countDown = true
+		end = time.Now().Add(*fCountdown)
+		if showText && cfg.text == "" {
+			toStr := end.Format(format)
+			if *fCountdown >= 24*time.Hour {
+				toStr = fmt.Sprintf("%s %s", end.Format("2006-01-02"), toStr)
+			}
+			cfg.text = "Countdown to " + toStr
+		}
 	}
 	if *fLinearBlending {
 		cfg.blendingFunction = ansipixels.BlendLinear
@@ -309,13 +348,13 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		doDraw := cfg.breath
 		now := time.Now()
 		if countDown {
-			left := end.Sub(now)
-			if left <= 0 {
+			left := end.Sub(now).Round(time.Second)
+			if left < 0 {
 				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(format))
 				extraNewLinesAtEnd = false
 				return 0
 			}
-			numStr = time.Time{}.Add(left).Format(format)
+			numStr = DurationString(left, seconds)
 		} else {
 			numStr = now.Format(format)
 		}
