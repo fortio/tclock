@@ -19,6 +19,7 @@ const (
 func ParseDuration(s string) (time.Duration, error) {
 	orig := s
 	var d time.Duration
+	neg := false
 	for s != "" {
 		// consume leading spaces
 		for len(s) > 0 && unicode.IsSpace(rune(s[0])) {
@@ -29,7 +30,7 @@ func ParseDuration(s string) (time.Duration, error) {
 		}
 		// find number part
 		i := 0
-		for i < len(s) && (('0' <= s[i] && s[i] <= '9') || s[i] == '.') {
+		for i < len(s) && (('0' <= s[i] && s[i] <= '9') || s[i] == '.' || s[i] == '-') {
 			i++
 		}
 		if i == 0 {
@@ -76,7 +77,17 @@ func ParseDuration(s string) (time.Duration, error) {
 		default:
 			return 0, errors.New("time: unknown unit " + unit + " in duration " + orig)
 		}
+		if v < 0 {
+			if neg || d != 0 {
+				return 0, errors.New("time: unexpected negative sign beside first " + orig)
+			}
+			neg = true
+			v = -v
+		}
 		d += time.Duration(v * float64(mult))
+	}
+	if neg {
+		d = -d
 	}
 	return d, nil
 }
