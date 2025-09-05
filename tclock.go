@@ -11,6 +11,7 @@ import (
 	"fortio.org/cli"
 	"fortio.org/log"
 	"fortio.org/tclock/bignum"
+	"fortio.org/tclock/fduration"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
@@ -209,7 +210,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	fTrueColor := flag.Bool("truecolor", truecolorDefault,
 		"Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if COLORTERM is set)")
 	fLinearBlending := flag.Bool("linear", false, "Use linear blending for the color disc (more sphere like)")
-	fCountdown := flag.Duration("countdown", 0, "If > 0, countdown from this duration instead of showing the time")
+	fCountdown := fduration.DurationFlag("countdown", 0, "If > 0, countdown from this duration instead of showing the time")
 	fText := flag.String("text", "",
 		"Text to display below the clock (during countdown will be the target time, use none for no extra text)")
 	cli.Main()
