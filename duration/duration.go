@@ -192,7 +192,7 @@ func Flag(name string, value time.Duration, usage string) *time.Duration {
 }
 
 func NextTime(now, d time.Time) time.Time {
-	d = time.Date(now.Year(), now.Month(), now.Day(), d.Hour(), d.Minute(), 0, 0, time.Local)
+	d = time.Date(now.Year(), now.Month(), now.Day(), d.Hour(), d.Minute(), d.Second(), 0, time.Local)
 	if d.Before(now) {
 		d = d.Add(24 * time.Hour)
 	}

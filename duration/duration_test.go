@@ -80,6 +80,37 @@ func TestFlag(t *testing.T) {
 	}
 }
 
+func TestParseDateTime(t *testing.T) {
+	now := time.Date(2025, 7, 31, 10, 30, 12, 0, time.Local)
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"1990-12-07 15:33:07", "1990-12-07 15:33:07"},
+		{"3:07pm", "2025-07-31 15:07:00"},
+		{"3:07 PM", "2025-07-31 15:07:00"},
+		{"10:29am", "2025-08-01 10:29:00"},
+		{"10:31:47", "2025-07-31 10:31:47"},
+		{"2021-12-31", "2021-12-31 00:00:00"},
+	}
+	for _, test := range tests {
+		t.Run(test.input, func(t *testing.T) {
+			d, err := duration.ParseDateTime(now, test.input)
+			if err != nil {
+				t.Fatal("Error:", err)
+			}
+			str := d.Format(time.DateTime)
+			if str != test.expected {
+				t.Errorf("Expected %v but got %v", test.expected, str)
+			}
+		})
+	}
+	d, err := duration.ParseDateTime(now, "23:00") // consider making this work instead of error
+	if err == nil {
+		t.Error("Expected error but got none:", d)
+	}
+}
+
 func Example() {
 	d, err := duration.Parse("1w 2d 3h 4m")
 	if err != nil {
