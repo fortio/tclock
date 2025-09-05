@@ -9,9 +9,8 @@ import (
 	"unicode"
 )
 
+// ParseDuration parses a duration string with "d" for days (24 hours) in addition to what stdlib time.ParseDuration supports.
 func ParseDuration(s string) (time.Duration, error) {
-	// copy of time.ParseDuration, with added "d"
-	// grammar: [0-9]+(ns|us|µs|ms|s|m|h|d)
 	orig := s
 	var d time.Duration
 	for s != "" {
@@ -89,6 +88,8 @@ func (d *Duration) Set(s string) error {
 	return nil
 }
 
+// DurationFlag defines a flag with the specified name, default value, and usage string, like
+// [flag.Duration] but supporting durations in days (24 hours) in addition to the other stdlib units.
 func DurationFlag(name string, value time.Duration, usage string) *time.Duration {
 	d := Duration(value)
 	flag.Var(&d, name, usage)
