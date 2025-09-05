@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata"
 	"unicode"
 )
 
@@ -191,10 +192,23 @@ func Flag(name string, value time.Duration, usage string) *time.Duration {
 	return (*time.Duration)(&d)
 }
 
+// NextTime takes a partially parsed time.Time (without date) and returns the time in the future
+// relative to now with same HH:MM:SS. It will adjust to daylight savings so that time maybe 25h or 23h
+// in the future around daylight savings transitions. If it's a double 3a-4a transition, and now is the
+// first 3:10am asking for 3:05a will not give the very next 3:05a (same day) but instead the one next day
+// ie at minimum 23h later.
 func NextTime(now, d time.Time) time.Time {
-	d = time.Date(now.Year(), now.Month(), now.Day(), d.Hour(), d.Minute(), d.Second(), 0, time.Local)
+	h := d.Hour()
+	d = time.Date(now.Year(), now.Month(), now.Day(), h, d.Minute(), d.Second(), d.Nanosecond(), now.Location())
 	if d.Before(now) {
 		d = d.Add(24 * time.Hour)
+		// daylight savings madness (see tests)
+		if d.Hour() < h {
+			d = d.Add(1 * time.Hour)
+		}
+		if d.Hour() > h {
+			d = d.Add(-1 * time.Hour)
+		}
 	}
 	return d
 }
@@ -207,8 +221,7 @@ var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-
 //   - Just a time (12-hour, 'kitchen' style): H:MM AM/PM
 //   - Just a 24h time: HH:MM:SS
 //
-// When date is missing next time from now is used (ie same time as today or +24h, which can be a different time
-// on daylight savings transition day). When the time is missing 00:00 is assumed.
+// When date is missing next same time from now is used. When the time is missing 00:00 is assumed.
 func ParseDateTime(now time.Time, s string) (time.Time, error) {
 	d, err := time.Parse(time.DateTime, s)
 	if err == nil {
