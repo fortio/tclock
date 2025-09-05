@@ -97,6 +97,9 @@ func Parse(s string) (time.Duration, error) {
 //nolint:recvcheck // need pointer receiver obviously for Set and for String avoids pointer.
 type Duration time.Duration
 
+// String formats the duration using weeks and days if applicable and omitting all 0 values and trailing zeroes
+// for instance "1d3m" instead of "24h3m0s" (stdlib).
+//
 //nolint:durationcheck // yes that's correct here
 func (d Duration) String() string {
 	td := time.Duration(d)
@@ -110,10 +113,17 @@ func (d Duration) String() string {
 		res.WriteByte('-')
 	}
 	days := td / Day
-	if days > 0 {
-		fmt.Fprintf(res, "%dd", days)
-	}
 	td -= days * Day
+	if days > 0 {
+		weeks := days / 7
+		if weeks > 0 {
+			fmt.Fprintf(res, "%dw", weeks)
+			days -= weeks * 7
+		}
+		if days > 0 {
+			fmt.Fprintf(res, "%dd", days)
+		}
+	}
 	hours := td / time.Hour
 	if hours > 0 {
 		fmt.Fprintf(res, "%dh", hours)

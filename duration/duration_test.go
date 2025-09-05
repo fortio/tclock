@@ -1,6 +1,7 @@
 package duration_test
 
 import (
+	"fmt"
 	"testing"
 
 	"fortio.org/tclock/duration"
@@ -22,6 +23,11 @@ func TestDurationString(t *testing.T) {
 		{"1.5ms", "1.5ms"},
 		{"1.5h", "1h30m"},
 		{"1.5d", "1d12h"},
+		{"6d23h59m59.999s", "6d23h59m59.999s"},
+		{"7d", "1w"},
+		{"8d", "1w1d"},
+		{"1w2d3h4m5s", "1w2d3h4m5s"},
+		{"99h", "4d3h"},
 	}
 	for _, test := range tests {
 		d, err := duration.Parse(test.input)
@@ -36,4 +42,17 @@ func TestDurationString(t *testing.T) {
 			t.Errorf("Expected %q but got %q", test.expected, str)
 		}
 	}
+}
+
+func Example() {
+	d, err := duration.Parse("1w 2d 3h 4m")
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Println("Parsed duration (std):", d)
+	fmt.Println("Parsed duration (new):", duration.Duration(d))
+	// Output:
+	// Parsed duration (std): 219h4m0s
+	// Parsed duration (new): 1w2d3h4m
 }
