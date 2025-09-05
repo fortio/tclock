@@ -3,7 +3,7 @@ name: "shared fortio workflows"
 
 on:
     push:
-      # branches: [ main ] # put back once testing with pre-releases on branch is done.
+      branches: [ main ] # put back once testing with pre-releases on branch is done.
       tags:
         - 'v*'
     pull_request:
