@@ -7,6 +7,26 @@ import (
 	"fortio.org/tclock/duration"
 )
 
+func TestDurationParseErrors(t *testing.T) {
+	tests := []struct {
+		input string
+	}{
+		{" 23 "},
+		{"s"},
+		{"23.5.7s"},
+		{"5x"},
+		{"-3d-7h"},
+		{"3d -7h 10m"},
+	}
+	for _, test := range tests {
+		d, err := duration.Parse(test.input)
+		t.Logf("Parsing %q: %v", test.input, err)
+		if err == nil {
+			t.Error("Expected error but got none, d=", d)
+		}
+	}
+}
+
 func TestDurationString(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -28,6 +48,9 @@ func TestDurationString(t *testing.T) {
 		{"8d", "1w1d"},
 		{"1w2d3h4m5s", "1w2d3h4m5s"},
 		{"99h", "4d3h"},
+		{"   ", "0s"},
+		{"10us", "10µs"},
+		{"-1d7h", "-1d7h"},
 	}
 	for _, test := range tests {
 		d, err := duration.Parse(test.input)
