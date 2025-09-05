@@ -218,10 +218,11 @@ var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-
 // ParseDateTime parses date/times in one of the following format:
 //   - Date and 24h time: YYYY-MM-DD HH:MM:SS
 //   - Just a date: YYYY-MM-DD
-//   - Just a time (12-hour, 'kitchen' style): H:MM AM/PM
 //   - Just a 24h time: HH:MM:SS
+//   - Just a time (12-hour, 'kitchen' style): H:MM AM/PM
 //
-// When date is missing next same time from now is used. When the time is missing 00:00 is assumed.
+// When date is missing next same time from now is used (ie later that day or next, up to 25h from now).
+// When the time is missing 00:00 is assumed.
 func ParseDateTime(now time.Time, s string) (time.Time, error) {
 	d, err := time.Parse(time.DateTime, s)
 	if err == nil {
