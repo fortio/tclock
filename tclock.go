@@ -279,7 +279,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	if countDown && showText && cfg.text == "" {
 		toStr := end.Format(format)
 		if end.Sub(now) >= 24*time.Hour {
-			toStr = fmt.Sprintf("%s %s%s", end.Format("2006-01-02"), toStr)
+			toStr = fmt.Sprintf("%s %s", end.Format("2006-01-02"), toStr)
 		}
 		extra := ""
 		if !*f24 && end.Hour() >= 12 {

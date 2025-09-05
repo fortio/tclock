@@ -199,7 +199,7 @@ func NextTime(now, d time.Time) time.Time {
 	return d
 }
 
-var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-MM-DD, H:MM am/pm or HH:MM:SS")
+var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-MM-DD, HH:MM:SS, or H:MM am/pm")
 
 // ParseDateTime parses date/times in one of the following format:
 //   - Date and 24h time: YYYY-MM-DD HH:MM:SS
