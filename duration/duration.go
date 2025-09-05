@@ -15,7 +15,7 @@ const (
 )
 
 // Parse parses a duration string with "d" for days (24 hours)
-// and "w" for weeks (7 days) in addition to what stdlib time.Parse supports.
+// and "w" for weeks (7 days) in addition to what stdlib [time.ParseDuration] supports.
 func Parse(s string) (time.Duration, error) {
 	orig := s
 	var d time.Duration
