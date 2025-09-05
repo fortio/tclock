@@ -172,7 +172,7 @@ func DurationString(duration time.Duration, withSeconds bool) string {
 
 func StopwatchString(duration time.Duration) string {
 	if duration < time.Duration(time.Minute) {
-		return fmt.Sprintf("%02d.%02d", int(duration.Seconds())%60, int(duration.Milliseconds())%60)
+		return fmt.Sprintf("%02d.%02d", int(duration.Seconds())%60, int(duration.Milliseconds()/10)%60)
 	}
 	return DurationString(duration, true)
 }
@@ -359,9 +359,17 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		ap.SyncBackgroundColor()
 	}
 	paused := false
-	stopwatchSince := time.Now()
-	curDur := time.Duration(0)
+	stopWatchTime := 0
+	ticker := time.NewTicker(time.Second / 100)
+
 	for {
+		if !paused {
+			select {
+			case <-ticker.C:
+				stopWatchTime += int(time.Second) / 100
+			default:
+			}
+		}
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
 			return 1
@@ -369,15 +377,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		if len(ap.Data) > 0 && *fStopwatch {
 			switch ap.Data[0] {
 			case ' ':
-
-				if !paused {
-					curDur = time.Since(stopwatchSince)
-				} else {
-					stopwatchSince = time.Now().Add(-curDur)
-				}
 				paused = !paused
 			case 'r':
-				stopwatchSince = time.Now()
+				stopWatchTime = 0
 			}
 		}
 
@@ -404,12 +406,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 			}
 			numStr = DurationString(left, seconds)
 		} else if *fStopwatch {
-			if !paused {
-				since := time.Since(stopwatchSince)
-				numStr = StopwatchString(since)
-			} else {
-				stopwatchSince = time.Now()
-			}
+			numStr = StopwatchString(time.Duration(stopWatchTime))
 		} else {
 			numStr = now.Format(format)
 		}
