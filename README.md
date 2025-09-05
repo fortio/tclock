@@ -78,6 +78,9 @@ flags:
   -truecolor
         Use true color (24-bit RGB) instead of 8-bit ANSI colors (default is true if
       COLORTERM is set)
+  -until date/time
+        If set, countdown until this date/time ("YYYY-MM-DD HH:MM:SS" or for instance
+      "3:05 pm") instead of showing the time
 ```
 
 ```sh
@@ -110,4 +113,6 @@ tclock -countdown 3w2d10h
 # Countdown until some date/time:
 tclock -until 3:05pm
 tclock -until "2025-12-25 15:05:00"
+# Countdown (using q or ^c will abort)
+tclock -countdown 5m -text "Shutdown countdown, Q to abort" && shutdown -r now
 ```
