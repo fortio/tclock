@@ -196,7 +196,7 @@ func Flag(name string, value time.Duration, usage string) *time.Duration {
 // relative to now with same HH:MM:SS. It will adjust to daylight savings so that time maybe 25h or 23h
 // in the future around daylight savings transitions. If it's a double 3a-4a transition, and now is the
 // first 3:10am asking for 3:05a will not give the very next 3:05a (same day) but instead the one next day
-// ie at minimum 23h later.
+// ie at minimum 23h later. The timezone of now is the one used and timezone of d should be the same.
 func NextTime(now, d time.Time) time.Time {
 	h := d.Hour()
 	d = time.Date(now.Year(), now.Month(), now.Day(), h, d.Minute(), d.Second(), d.Nanosecond(), now.Location())
