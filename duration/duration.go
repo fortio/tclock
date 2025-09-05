@@ -1,5 +1,5 @@
-// Package fduration allows duration parsing with "d" for days (24 hours).
-package fduration
+// Package duration allows duration parsing with "d" for days (24 hours) and "w" for week (7 days).
+package duration
 
 import (
 	"errors"
@@ -9,7 +9,13 @@ import (
 	"unicode"
 )
 
-// ParseDuration parses a duration string with "d" for days (24 hours) in addition to what stdlib time.ParseDuration supports.
+const (
+	Day  = 24 * time.Hour
+	Week = 7 * Day
+)
+
+// ParseDuration parses a duration string with "d" for days (24 hours)
+// and "w" for weeks (7 days) in addition to what stdlib time.ParseDuration supports.
 func ParseDuration(s string) (time.Duration, error) {
 	orig := s
 	var d time.Duration
@@ -64,7 +70,9 @@ func ParseDuration(s string) (time.Duration, error) {
 		case "h":
 			mult = time.Hour
 		case "d":
-			mult = 24 * time.Hour
+			mult = Day
+		case "w":
+			mult = Week
 		default:
 			return 0, errors.New("time: unknown unit " + unit + " in duration " + orig)
 		}
@@ -88,9 +96,9 @@ func (d *Duration) Set(s string) error {
 	return nil
 }
 
-// DurationFlag defines a flag with the specified name, default value, and usage string, like
+// Flag defines a duration flag with the specified name, default value, and usage string, like
 // [flag.Duration] but supporting durations in days (24 hours) in addition to the other stdlib units.
-func DurationFlag(name string, value time.Duration, usage string) *time.Duration {
+func Flag(name string, value time.Duration, usage string) *time.Duration {
 	d := Duration(value)
 	flag.Var(&d, name, usage)
 	return (*time.Duration)(&d)
