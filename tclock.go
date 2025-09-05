@@ -170,6 +170,13 @@ func DurationString(duration time.Duration, withSeconds bool) string {
 	return str
 }
 
+func StopwatchString(duration time.Duration) string {
+	if duration < time.Duration(time.Minute) {
+		return fmt.Sprintf("%02d.%02d", int(duration.Seconds())%60, int(duration.Milliseconds())%60)
+	}
+	return DurationString(duration, true)
+}
+
 func DurationDDHHMM(duration time.Duration) string {
 	minutes := int(duration.Minutes()) % 60
 	hours := int(duration.Hours()) % 24
@@ -325,7 +332,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		cfg.colorDisc = RGBColor(color)
 	}
 	ap.HideCursor()
-	cfg.ClearScreen()
+	// cfg.ClearScreen()
 	trackMouse := false
 	bounceSpeed := *fBounce
 	bounce := (bounceSpeed > 0)
@@ -353,14 +360,27 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	paused := false
 	stopwatchSince := time.Now()
+	curDur := time.Duration(0)
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
 			return 1
 		}
-		if len(ap.Data) > 0 && ap.Data[0] == ' ' && *fStopwatch {
-			paused = !paused
+		if len(ap.Data) > 0 && *fStopwatch {
+			switch ap.Data[0] {
+			case ' ':
+
+				if !paused {
+					curDur = time.Since(stopwatchSince)
+				} else {
+					stopwatchSince = time.Now().Add(-curDur)
+				}
+				paused = !paused
+			case 'r':
+				stopwatchSince = time.Now()
+			}
 		}
+
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
 			if countDown {
@@ -386,7 +406,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		} else if *fStopwatch {
 			if !paused {
 				since := time.Since(stopwatchSince)
-				numStr = DurationString(since, true)
+				numStr = StopwatchString(since)
+			} else {
+				stopwatchSince = time.Now()
 			}
 		} else {
 			numStr = now.Format(format)
