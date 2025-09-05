@@ -213,7 +213,8 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	fCountdown := duration.Flag("countdown", 0, "If > 0, countdown from this `duration` instead of showing the time")
 	fText := flag.String("text", "",
 		"Text to display below the clock (during countdown will be the target time, use none for no extra text)")
-	fUntil := flag.String("until", "", "If set, countdown until this `date/time` (YYYY-MM-DD HH:MM:SS) instead of showing the time")
+	fUntil := flag.String("until", "",
+		"If set, countdown until this `date/time` (\"YYYY-MM-DD HH:MM:SS\" or for instance \"3:05 pm\") instead of showing the time")
 	cli.Main()
 
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
@@ -354,8 +355,13 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		if err != nil {
 			return 1
 		}
+		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
-			return 0 // exit on 'q' or Ctrl-C
+			if countDown {
+				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", now.Format(format))
+				return 1
+			}
+			return 0
 		}
 		// Click to place the time at the mouse position (or switch back to move with mouse).
 		if ap.LeftClick() && ap.MouseRelease() {
