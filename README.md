@@ -105,4 +105,6 @@ tclock -bounce 1
 tclock -color-disc ""
 # This is nice to try too:
 tclock -color-disc "" -breath -linear
+# Countdown, allows d for days (24 hours) and w (7 days) unlike stdlib duration parsing
+tclock -countdown 3w2d10h
 ```
