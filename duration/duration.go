@@ -183,7 +183,8 @@ func (d *Duration) Set(s string) error {
 }
 
 // Flag defines a duration flag with the specified name, default value, and usage string, like
-// [flag.Duration] but supporting durations in days (24 hours) in addition to the other stdlib units.
+// [flag.Duration] but supporting durations in days (24 hours) and weeks (7 days)
+// in addition to the other stdlib units.
 func Flag(name string, value time.Duration, usage string) *time.Duration {
 	d := Duration(value)
 	flag.Var(&d, name, usage)
