@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata" // load fallback timezone data for use in docker images.
 	"unicode"
 )
 
@@ -189,4 +190,55 @@ func Flag(name string, value time.Duration, usage string) *time.Duration {
 	d := Duration(value)
 	flag.Var(&d, name, usage)
 	return (*time.Duration)(&d)
+}
+
+// NextTime takes a partially parsed time.Time (without date) and returns the time in the future
+// relative to now with same HH:MM:SS. It will adjust to daylight savings so that time maybe 25h or 23h
+// in the future around daylight savings transitions. If it's a double 3a-4a transition, and now is the
+// first 3:10am asking for 3:05a will not give the very next 3:05a (same day) but instead the one next day
+// ie at minimum 23h later. The timezone of now is the one used and timezone of d should be the same.
+func NextTime(now, d time.Time) time.Time {
+	h := d.Hour()
+	d = time.Date(now.Year(), now.Month(), now.Day(), h, d.Minute(), d.Second(), d.Nanosecond(), now.Location())
+	if d.Before(now) {
+		d = d.Add(24 * time.Hour)
+		// daylight savings madness (see tests)
+		if d.Hour() < h {
+			d = d.Add(1 * time.Hour)
+		}
+		if d.Hour() > h {
+			d = d.Add(-1 * time.Hour)
+		}
+	}
+	return d
+}
+
+var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-MM-DD, HH:MM:SS, or H:MM am/pm")
+
+// ParseDateTime parses date/times in one of the following format:
+//   - Date and 24h time: YYYY-MM-DD HH:MM:SS
+//   - Just a date: YYYY-MM-DD
+//   - Just a 24h time: HH:MM:SS
+//   - Just a time (12-hour, 'kitchen' style): H:MM AM/PM
+//
+// When date is missing next same time from now is used (ie later that day or next, up to 25h from now).
+// When the time is missing 00:00 is assumed.
+func ParseDateTime(now time.Time, s string) (time.Time, error) {
+	d, err := time.Parse(time.DateTime, s)
+	if err == nil {
+		return d, nil
+	}
+	d, err = time.Parse(time.DateOnly, s)
+	if err == nil {
+		return d, nil
+	}
+	d, err = time.Parse(time.TimeOnly, s)
+	if err == nil {
+		return NextTime(now, d), nil
+	}
+	d, err = time.Parse(time.Kitchen, strings.ToUpper(strings.ReplaceAll(s, " ", "")))
+	if err == nil {
+		return NextTime(now, d), nil
+	}
+	return d, ErrDateTimeParsing
 }
