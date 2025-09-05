@@ -4,7 +4,9 @@ package duration
 import (
 	"errors"
 	"flag"
+	"fmt"
 	"strconv"
+	"strings"
 	"time"
 	"unicode"
 )
@@ -92,10 +94,83 @@ func Parse(s string) (time.Duration, error) {
 	return d, nil
 }
 
+//nolint:recvcheck // need pointer receiver obviously for Set and for String avoids pointer.
 type Duration time.Duration
 
-func (d *Duration) String() string {
-	return time.Duration(*d).String()
+// String formats the duration using weeks and days if applicable and omitting all 0 values and trailing zeroes
+// for instance "1d3m" instead of "24h3m0s" (stdlib).
+//
+//nolint:durationcheck // yes that's correct here
+func (d Duration) String() string {
+	td := time.Duration(d)
+	// Small durations use stdlib for ms, ns etc
+	if td < 1*time.Second && td > -1*time.Second {
+		return td.String()
+	}
+	res := &strings.Builder{}
+	if td < 0 {
+		td = -td
+		res.WriteByte('-')
+	}
+	days := td / Day
+	td -= days * Day
+	if days > 0 {
+		weeks := days / 7
+		if weeks > 0 {
+			fmt.Fprintf(res, "%dw", weeks)
+			days -= weeks * 7
+		}
+		if days > 0 {
+			fmt.Fprintf(res, "%dd", days)
+		}
+	}
+	hours := td / time.Hour
+	if hours > 0 {
+		fmt.Fprintf(res, "%dh", hours)
+	}
+	td -= hours * time.Hour
+	minutes := td / time.Minute
+	if minutes > 0 {
+		fmt.Fprintf(res, "%dm", minutes)
+	}
+	td -= minutes * time.Minute
+	seconds := td / time.Second
+	td -= seconds * time.Second
+	roundSeconds := (td == 0)
+	if roundSeconds && seconds == 0 {
+		return res.String()
+	}
+	if roundSeconds {
+		fmt.Fprintf(res, "%ds", seconds)
+		return res.String()
+	}
+	// fractional seconds
+	fmt.Fprintf(res, "%d.", seconds)
+	res.Write(writeFrac(td))
+	res.WriteByte('s')
+	return res.String()
+}
+
+// writeFrac writes the fractional part of duration (once seconds have been removed)
+// up to nanosecond if present but returns a string with leading but not trailing zeroes.
+func writeFrac(td time.Duration) []byte {
+	var buf [9]byte
+	i := len(buf)
+	notZeroes := -1
+	for td > 0 && i > 0 {
+		i--
+		v := td % 10
+		if v != 0 && notZeroes == -1 {
+			notZeroes = i + 1
+		}
+		buf[i] = byte('0' + v)
+		td /= 10
+	}
+	for i > 0 {
+		i--
+		buf[i] = '0'
+	}
+	return buf[:notZeroes]
 }
 
 func (d *Duration) Set(s string) error {
