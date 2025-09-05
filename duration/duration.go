@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	_ "time/tzdata"
+	_ "time/tzdata" // load fallback timezone data for use in docker images.
 	"unicode"
 )
 

@@ -112,7 +112,8 @@ func TestParseDateTime(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.input, func(t *testing.T) {
-			d, err := duration.ParseDateTime(test.now, test.input)
+			var d time.Time
+			d, err = duration.ParseDateTime(test.now, test.input)
 			if err != nil {
 				t.Fatal("Error:", err)
 			}
