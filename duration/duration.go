@@ -190,3 +190,41 @@ func Flag(name string, value time.Duration, usage string) *time.Duration {
 	flag.Var(&d, name, usage)
 	return (*time.Duration)(&d)
 }
+
+func NextTime(now, d time.Time) time.Time {
+	d = time.Date(now.Year(), now.Month(), now.Day(), d.Hour(), d.Minute(), 0, 0, time.Local)
+	if d.Before(now) {
+		d = d.Add(24 * time.Hour)
+	}
+	return d
+}
+
+var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-MM-DD, H:MM am/pm or HH:MM:SS")
+
+// ParseDateTime parses date/times in one of the following format:
+//   - Date and 24h time: YYYY-MM-DD HH:MM:SS
+//   - Just a date: YYYY-MM-DD
+//   - Just a time (12-hour, 'kitchen' style): H:MM AM/PM
+//   - Just a 24h time: HH:MM:SS
+//
+// When date is missing next time from now is used (ie same time as today or +24h, which can be a different time
+// on daylight savings transition day). When the time is missing 00:00 is assumed.
+func ParseDateTime(now time.Time, s string) (time.Time, error) {
+	d, err := time.Parse(time.DateTime, s)
+	if err == nil {
+		return d, nil
+	}
+	d, err = time.Parse(time.DateOnly, s)
+	if err == nil {
+		return d, nil
+	}
+	d, err = time.Parse(time.TimeOnly, s)
+	if err == nil {
+		return NextTime(now, d), nil
+	}
+	d, err = time.Parse(time.Kitchen, strings.ToUpper(strings.ReplaceAll(s, " ", "")))
+	if err == nil {
+		return NextTime(now, d), nil
+	}
+	return d, ErrDateTimeParsing
+}

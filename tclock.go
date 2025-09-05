@@ -213,7 +213,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	fCountdown := duration.Flag("countdown", 0, "If > 0, countdown from this `duration` instead of showing the time")
 	fText := flag.String("text", "",
 		"Text to display below the clock (during countdown will be the target time, use none for no extra text)")
+	fUntil := flag.String("until", "", "If set, countdown until this `date/time` (YYYY-MM-DD HH:MM:SS) instead of showing the time")
 	cli.Main()
+
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	var numStr string
 	if flag.NArg() == 1 {
@@ -261,16 +263,29 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	countDown := false
 	var end time.Time
+	now := time.Now()
 	if *fCountdown > 0 {
 		countDown = true
-		end = time.Now().Add(*fCountdown)
-		if showText && cfg.text == "" {
-			toStr := end.Format(format)
-			if *fCountdown >= 24*time.Hour {
-				toStr = fmt.Sprintf("%s %s", end.Format("2006-01-02"), toStr)
-			}
-			cfg.text = "Countdown to " + toStr
+		end = now.Add(*fCountdown)
+	}
+	if *fUntil != "" {
+		countDown = true
+		var err error
+		end, err = duration.ParseDateTime(now, *fUntil)
+		if err != nil {
+			return log.FErrf("Invalid until time: %v", err)
 		}
+	}
+	if countDown && showText && cfg.text == "" {
+		toStr := end.Format(format)
+		if end.Sub(now) >= 24*time.Hour {
+			toStr = fmt.Sprintf("%s %s%s", end.Format("2006-01-02"), toStr)
+		}
+		extra := ""
+		if !*f24 && end.Hour() >= 12 {
+			extra = " pm"
+		}
+		cfg.text = "Countdown to " + toStr + extra
 	}
 	if *fLinearBlending {
 		cfg.blendingFunction = ansipixels.BlendLinear

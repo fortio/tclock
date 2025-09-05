@@ -107,4 +107,7 @@ tclock -color-disc ""
 tclock -color-disc "" -breath -linear
 # Countdown, allows d for days (24 hours) and w (7 days) unlike stdlib duration parsing
 tclock -countdown 3w2d10h
+# Countdown until some date/time:
+tclock -until 3:05pm
+tclock -until "2025-12-25 15:05:00"
 ```
