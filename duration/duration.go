@@ -34,7 +34,7 @@ func ParseDuration(s string) (time.Duration, error) {
 			i++
 		}
 		if i == 0 {
-			return 0, errors.New("time: invalid duration " + orig)
+			return 0, errors.New("invalid duration " + orig)
 		}
 		num := s[:i]
 		s = s[i:]
@@ -45,7 +45,7 @@ func ParseDuration(s string) (time.Duration, error) {
 			j++
 		}
 		if j == 0 {
-			return 0, errors.New("time: missing unit in duration " + orig)
+			return 0, errors.New("missing unit in duration " + orig)
 		}
 		unit := s[:j]
 		s = s[j:]
@@ -75,11 +75,11 @@ func ParseDuration(s string) (time.Duration, error) {
 		case "w":
 			mult = Week
 		default:
-			return 0, errors.New("time: unknown unit " + unit + " in duration " + orig)
+			return 0, errors.New("unknown unit " + unit + " in duration " + orig)
 		}
 		if v < 0 {
 			if neg || d != 0 {
-				return 0, errors.New("time: unexpected negative sign beside first " + orig)
+				return 0, errors.New("unexpected negative sign in middle of duration " + orig)
 			}
 			neg = true
 			v = -v
