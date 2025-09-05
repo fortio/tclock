@@ -1,8 +1,10 @@
 package duration_test
 
 import (
+	"flag"
 	"fmt"
 	"testing"
+	"time"
 
 	"fortio.org/tclock/duration"
 )
@@ -19,7 +21,8 @@ func TestDurationParseErrors(t *testing.T) {
 		{"3d -7h 10m"},
 	}
 	for _, test := range tests {
-		d, err := duration.Parse(test.input)
+		var d duration.Duration
+		err := d.Set(test.input) // Parse errors through Set.
 		t.Logf("Parsing %q: %v", test.input, err)
 		if err == nil {
 			t.Error("Expected error but got none, d=", d)
@@ -53,17 +56,27 @@ func TestDurationString(t *testing.T) {
 		{"-1d7h", "-1d7h"},
 	}
 	for _, test := range tests {
-		d, err := duration.Parse(test.input)
+		var d duration.Duration
+		err := d.Set(test.input) // so we exercise both Set and Parse.
 		if err != nil {
 			t.Error("Error:", err)
 			continue
 		}
-		t.Log("Parsed duration (std) :", d)
-		str := duration.Duration(d).String()
+		t.Log("Parsed duration (std) :", time.Duration(d))
+		str := d.String()
 		t.Log("Parsed duration (ours):", str)
 		if str != test.expected {
 			t.Errorf("Expected %q but got %q", test.expected, str)
 		}
+	}
+}
+
+func TestFlag(t *testing.T) {
+	defaultValue, _ := duration.Parse("1d3m")
+	f := duration.Flag("test", defaultValue, "test `duration`")
+	flag.Lookup("test").Value.Set("1d1h")
+	if *f != 25*time.Hour {
+		t.Errorf("Expected 25h but got %v", *f)
 	}
 }
 
