@@ -193,6 +193,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	cli.MaxArgs = 1
 	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
+	fStopwatch := flag.Bool("stopwatch", false, "Use tclock as a stopwatch")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
@@ -350,10 +351,15 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	} else {
 		ap.SyncBackgroundColor()
 	}
+	paused := false
+	stopwatchSince := time.Now()
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
 			return 1
+		}
+		if len(ap.Data) > 0 && ap.Data[0] == ' ' && *fStopwatch {
+			paused = !paused
 		}
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
@@ -377,6 +383,11 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 				return 0
 			}
 			numStr = DurationString(left, seconds)
+		} else if *fStopwatch {
+			if !paused {
+				since := time.Since(stopwatchSince)
+				numStr = DurationString(since, true)
+			}
 		} else {
 			numStr = now.Format(format)
 		}
