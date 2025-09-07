@@ -172,7 +172,7 @@ func DurationString(duration time.Duration, withSeconds bool) string {
 
 func StopwatchString(duration time.Duration) string {
 	if duration < time.Duration(time.Minute) {
-		return fmt.Sprintf("%02d.%02d", int(duration.Seconds())%60, int(duration.Milliseconds()/10)%60)
+		return fmt.Sprintf("%02d.%02d", int(duration.Seconds())%60, int(duration.Milliseconds()/10)%100)
 	}
 	return DurationString(duration, true)
 }
@@ -246,6 +246,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		os.Exit(1)
 	}
 	extraNewLinesAtEnd := true
+	splits := make([]int, 0)
 	defer func() {
 		if extraNewLinesAtEnd {
 			fmt.Fprintf(ap.Out, "\r\n\n\n\n")
@@ -380,6 +381,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 				paused = !paused
 			case 'r':
 				stopWatchTime = 0
+				splits = make([]int, 0)
+			case 's':
+				splits = append(splits, stopWatchTime)
 			}
 		}
 
@@ -431,7 +435,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 			x, y = ap.Mx, ap.My
 			doDraw = true
 		}
-		if doDraw {
+		if *fStopwatch {
+			DrawStopwatchAndSplits(ap, splits, cfg, x, y, numStr, doDraw)
+		} else if doDraw {
 			cfg.frame++
 			ap.StartSyncMode()
 			cfg.ClearScreen()
@@ -441,4 +447,20 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 			ap.EndSyncMode()
 		}
 	}
+}
+
+func DrawStopwatchAndSplits(ap *ansipixels.AnsiPixels, splits []int, cfg *Config, x, y int, numStr string, doDraw bool) {
+	ap.StartSyncMode()
+	if doDraw {
+		cfg.ClearScreen()
+		cfg.DrawAt(x-1, y-1, TimeString(numStr, false))
+	}
+	if len(splits) == 0 {
+		ap.EndSyncMode()
+		return
+	}
+	for i, split := range splits {
+		ap.WriteAtStr(1, i, StopwatchString(time.Duration(split)))
+	}
+	ap.EndSyncMode()
 }
