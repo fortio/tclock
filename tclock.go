@@ -384,6 +384,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 				splits = make([]int, 0)
 			case 's':
 				splits = append(splits, stopWatchTime)
+				splits = splits[max(len(splits)-ap.H, 0):]
 			}
 		}
 
