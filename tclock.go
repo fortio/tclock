@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"fortio.org/cli"
+	"fortio.org/duration"
 	"fortio.org/log"
 	"fortio.org/tclock/bignum"
-	"fortio.org/tclock/duration"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
