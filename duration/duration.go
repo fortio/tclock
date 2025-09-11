@@ -10,28 +10,28 @@ import (
 )
 
 const (
-	// Deprecated: use [fortio.org/duration/Day] directly.
+	// Deprecated: use [fortio.org/duration.Day] directly.
 	Day = duration.Day
-	// Deprecated: use [fortio.org/duration/Week] directly.
+	// Deprecated: use [fortio.org/duration.Week] directly.
 	Week = duration.Week
 )
 
 // Parse parses a duration string with "d" for days (24 hours)
 // and "w" for weeks (7 days) in addition to what stdlib [time.ParseDuration] supports.
 //
-// Deprecated: use [fortio.org/duration/Parse] directly.
+// Deprecated: use [fortio.org/duration.Parse] directly.
 func Parse(s string) (time.Duration, error) {
 	return duration.Parse(s)
 }
 
-// Deprecated: use [fortio.org/duration/Duration] directly.
+// Deprecated: use [fortio.org/duration.Duration] directly.
 type Duration = duration.Duration
 
 // Flag defines a duration flag with the specified name, default value, and usage string, like
 // [flag.Duration] but supporting durations in days (24 hours) and weeks (7 days)
 // in addition to the other stdlib units.
 //
-// Deprecated: use [fortio.org/duration/Flag] directly.
+// Deprecated: use [fortio.org/duration.Flag] directly.
 func Flag(name string, value time.Duration, usage string) *time.Duration {
 	return duration.Flag(name, value, usage)
 }
@@ -42,12 +42,12 @@ func Flag(name string, value time.Duration, usage string) *time.Duration {
 // first 3:10am asking for 3:05a will not give the very next 3:05a (same day) but instead the one next day
 // ie at minimum 23h later. The timezone of now is the one used and timezone of d should be the same.
 //
-// Deprecated: use [fortio.org/duration/NextTime].
+// Deprecated: use [fortio.org/duration.NextTime] directly.
 func NextTime(now, d time.Time) time.Time {
 	return duration.NextTime(now, d)
 }
 
-// Deprecated: use [fortio.org/duration/ErrDateTimeParsing] directly.
+// Deprecated: use [fortio.org/duration.ErrDateTimeParsing] directly.
 var ErrDateTimeParsing = duration.ErrDateTimeParsing
 
 // ParseDateTime parses date/times in one of the following format:
@@ -61,7 +61,7 @@ var ErrDateTimeParsing = duration.ErrDateTimeParsing
 // The time/date is interpreted in relation to the location and timezone of the `now` parameter (local time
 // per TZ environment when using time.Now() for instance).
 //
-// Deprecated: use [fortio.org/duration/ParseDateTime] directly.
+// Deprecated: use [fortio.org/duration.ParseDateTime] directly.
 func ParseDateTime(now time.Time, s string) (time.Time, error) {
 	return duration.ParseDateTime(now, s)
 }
