@@ -224,19 +224,19 @@ var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-
 // When date is missing next same time from now is used (ie later that day or next, up to 25h from now).
 // When the time is missing 00:00 is assumed.
 func ParseDateTime(now time.Time, s string) (time.Time, error) {
-	d, err := time.Parse(time.DateTime, s)
+	d, err := time.ParseInLocation(time.DateTime, s, now.Location())
 	if err == nil {
 		return d, nil
 	}
-	d, err = time.Parse(time.DateOnly, s)
+	d, err = time.ParseInLocation(time.DateOnly, s, now.Location())
 	if err == nil {
 		return d, nil
 	}
-	d, err = time.Parse(time.TimeOnly, s)
+	d, err = time.ParseInLocation(time.TimeOnly, s, now.Location())
 	if err == nil {
 		return NextTime(now, d), nil
 	}
-	d, err = time.Parse(time.Kitchen, strings.ToUpper(strings.ReplaceAll(s, " ", "")))
+	d, err = time.ParseInLocation(time.Kitchen, strings.ToUpper(strings.ReplaceAll(s, " ", "")), now.Location())
 	if err == nil {
 		return NextTime(now, d), nil
 	}

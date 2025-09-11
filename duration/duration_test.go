@@ -129,6 +129,24 @@ func TestParseDateTime(t *testing.T) {
 	}
 }
 
+func TestParseDateTimeIsLocal(t *testing.T) {
+	now := time.Now()
+	now = now.Round(time.Second)
+	str := now.Format(time.DateTime)
+	t.Log("Now:", str)
+	d, err := duration.ParseDateTime(now, str)
+	if err != nil {
+		t.Fatal("Error:", err)
+	}
+	if !d.Equal(now) {
+		t.Errorf("Expected %v but got %v", now, d)
+	}
+	actual := d.Format(time.DateTime)
+	if actual != str {
+		t.Errorf("Expected %v but got %v", str, actual)
+	}
+}
+
 func Example() {
 	d, err := duration.Parse("1w 2d 3h 4m")
 	if err != nil {
