@@ -115,4 +115,6 @@ tclock -until 3:05pm
 tclock -until "2025-12-25 15:05:00"
 # Countdown (using q or ^c will abort)
 tclock -countdown 5m -text "Shutdown countdown, Q to abort" && shutdown -r now
+# Check the time in New-York (US East coast time):
+TZ=America/New_York tclock
 ```
