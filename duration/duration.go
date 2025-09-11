@@ -223,20 +223,23 @@ var ErrDateTimeParsing = errors.New("expecting one of YYYY-MM-DD HH:MM:SS, YYYY-
 //
 // When date is missing next same time from now is used (ie later that day or next, up to 25h from now).
 // When the time is missing 00:00 is assumed.
+// The time/date is interpreted in relation to the location and timezone of the `now` parameter (local time
+// per TZ environment when using time.Now() for instance).
 func ParseDateTime(now time.Time, s string) (time.Time, error) {
-	d, err := time.ParseInLocation(time.DateTime, s, now.Location())
+	tzLoc := now.Location()
+	d, err := time.ParseInLocation(time.DateTime, s, tzLoc)
 	if err == nil {
 		return d, nil
 	}
-	d, err = time.ParseInLocation(time.DateOnly, s, now.Location())
+	d, err = time.ParseInLocation(time.DateOnly, s, tzLoc)
 	if err == nil {
 		return d, nil
 	}
-	d, err = time.ParseInLocation(time.TimeOnly, s, now.Location())
+	d, err = time.ParseInLocation(time.TimeOnly, s, tzLoc)
 	if err == nil {
 		return NextTime(now, d), nil
 	}
-	d, err = time.ParseInLocation(time.Kitchen, strings.ToUpper(strings.ReplaceAll(s, " ", "")), now.Location())
+	d, err = time.ParseInLocation(time.Kitchen, strings.ToUpper(strings.ReplaceAll(s, " ", "")), tzLoc)
 	if err == nil {
 		return NextTime(now, d), nil
 	}
