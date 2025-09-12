@@ -1,5 +1,6 @@
 // Deprecated: package moved to standalone 0 dependencies [fortio.org/duration] to
-// allows duration parsing with "d" for days (24 hours) and "w" for week (7 days).
+// allows duration parsing with "d" for days (24 hours) and "w" for week (7 days)
+// and more.
 package duration
 
 import (
