@@ -376,7 +376,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	} else {
 		cfg.blackBG = tcolor.Black.Background()
 	}
-	ap.HideCursor()
+	if !cfg.topRight {
+		ap.HideCursor()
+	}
 	cfg.ClearScreen()
 	if (cfg.bounceSpeed <= 0) && !cfg.topRight {
 		ap.MouseTrackingOn()
@@ -474,13 +476,13 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 				cfg.ClearScreen()
 			}
 			if n > 0 {
-				ap.RestoreCursorPos()
 				_, _ = writer.Write(buf[:n])
 				ap.SaveCursorPos()
 			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
 			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))
+			ap.RestoreCursorPos()
 			ap.EndSyncMode()
 		}
 	}

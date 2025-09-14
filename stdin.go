@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/signal"
@@ -20,6 +21,7 @@ func StdinTail(cfg *Config) int {
 	ap := cfg.ap
 	var buf [4096]byte
 	ap.Out = bufio.NewWriter(os.Stdout)
+	defer ap.Out.Flush()
 	_ = ap.GetSize()
 	blink := false
 	var prevNow time.Time
@@ -38,7 +40,7 @@ func StdinTail(cfg *Config) int {
 		if cfg.countDown {
 			left := cfg.end.Sub(now).Round(time.Second)
 			if left < 0 {
-				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(cfg.format))
+				ap.WriteString(fmt.Sprintf("\n\n\aTime's up reached at %s\r\n", now.Format(cfg.format)))
 				cfg.extraNewLinesAtEnd = false
 				return 0
 			}
