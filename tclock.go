@@ -443,7 +443,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 			if n > 0 {
 				ap.MoveCursor(prevX, prevY) // back to where we left off
 				_, _ = writer.Write(buf[:n])
-				prevX, prevY, _ = ap.ReadCursorPosXY()
+				// prevX, prevY, _ = ap.ReadCursorPosXY()
 			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
