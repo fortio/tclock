@@ -40,7 +40,6 @@ func StdinTail(cfg *Config) int {
 			left := cfg.end.Sub(now).Round(time.Second)
 			if left < 0 {
 				ap.WriteString(fmt.Sprintf("\n\n\aTime's up reached at %s\r\n", now.Format(cfg.format)))
-				cfg.extraNewLinesAtEnd = false
 				return 0
 			}
 			numStr = DurationString(left, cfg.seconds)
