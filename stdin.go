@@ -14,7 +14,8 @@ import (
 )
 
 func StdinTail(cfg *Config) int {
-	reader := terminal.NewTimeoutReader(os.Stdin, 100*time.Millisecond)
+	maxPoll := 100 * time.Millisecond
+	reader := terminal.NewTimeoutReader(os.Stdin, maxPoll)
 	var numStr string
 	ap := cfg.ap
 	var buf [4096]byte
@@ -57,11 +58,11 @@ func StdinTail(cfg *Config) int {
 		prevNow = now
 		n, err := reader.Read(buf[:])
 		if err != nil {
-			if errors.Is(err, io.EOF) {
-				log.LogVf("Stdin closed")
-				return 0
+			if !errors.Is(err, io.EOF) {
+				return log.FErrf("Error reading stdin: %v", err)
 			}
-			return log.FErrf("Error reading stdin: %v", err)
+			log.Debugf("EOF on stdin")
+			time.Sleep(maxPoll) // EOF is continuous until there is more in the file, so avoid too tight loop.
 		}
 		if doDraw || n > 0 {
 			cfg.frame++
