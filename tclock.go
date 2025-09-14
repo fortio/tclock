@@ -35,6 +35,7 @@ type Config struct {
 	inverse     bool
 	debug       bool
 	bounce      int             // bounce counter, 0 means no bouncing
+	bounceSpeed int             // frame skip for bouncing, 0 means no bouncing
 	frame       int             // frame counter for breathing effect
 	breath      bool            // whether to pulse the color
 	bcolor      tcolor.RGBColor // color to use for breathing effect
@@ -50,6 +51,19 @@ type Config struct {
 	text string
 	// In tail mode we stick the clock at the top right of the screen.
 	topRight bool
+	tail     io.Reader
+	// countdown mode
+	countDown          bool
+	end                time.Time
+	extraNewLinesAtEnd bool
+	// time format
+	format string
+	// Mouse tracking flip flop (on click toggle or just off when using bounce or tail mode)
+	trackMouse bool
+	// Blinking of the second
+	blinkEnabled bool
+	// Show seconds
+	seconds bool
 }
 
 func bounce(frame, maximum int) int {
@@ -192,6 +206,13 @@ func DurationDDHHMM(duration time.Duration) string {
 	return fmt.Sprintf("%02d", minutes)
 }
 
+func (c *Config) Tail() *Config {
+	c.topRight = true
+	c.colorDisc = tcolor.RGBColor{}
+	c.boxed = true
+	return c
+}
+
 func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split the flags and rest.
 	truecolorDefault := ansipixels.DetectColorMode().TrueColor
 	discDefault := "E0C020"
@@ -200,7 +221,8 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
-	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
+	cli.ArgsHelp = " [digits:digits... or - for stdin tailing]\n" +
+		"pass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
@@ -225,40 +247,14 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	fUntil := flag.String("until", "",
 		"If set, countdown until this `date/time` (\"YYYY-MM-DD HH:MM:SS\" or for instance \"3:05 pm\") instead of showing the time")
 	fTail := flag.String("tail", "",
-		"Tail the given `filename` while showing the clock")
+		"Tail the given `filename` while showing the clock, or `-` for stdin")
 	cli.Main()
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
-	var numStr string
-	if flag.NArg() == 1 {
-		numStr = flag.Arg(0)
-		fmt.Println(TimeString(numStr, false))
-		return 0
-	}
 	format := "3:04"
 	if *f24 {
 		format = "15:04"
 	}
-	seconds := !*fNoSeconds
-	if seconds {
-		format += ":05"
-	}
-	ap := ansipixels.NewAnsiPixels(60)
-	if err := ap.Open(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error opening terminal: %v\n", err)
-		os.Exit(1)
-	}
-	extraNewLinesAtEnd := true
-	defer func() {
-		if extraNewLinesAtEnd {
-			fmt.Fprintf(ap.Out, "\r\n\n\n\n")
-		}
-		ap.ShowCursor()
-		ap.MouseTrackingOff()
-		ap.EndSyncMode()
-		ap.Restore()
-	}()
 	cfg := &Config{
-		ap:          ap,
 		boxed:       *fBox,
 		inverse:     *fInverse,
 		debug:       *fDebug,
@@ -267,33 +263,37 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		radius:      *fRadius,
 		fillBlack:   *fFillBlack,
 		aliasing:    *fAliasing,
+		format:      format,
+		seconds:     !*fNoSeconds,
+		bounceSpeed: *fBounce,
+	}
+	if cfg.seconds {
+		cfg.format += ":05"
 	}
 	showText := *fText != "none"
 	if showText {
 		cfg.text = *fText
 	}
-	countDown := false
-	var end time.Time
 	now := time.Now()
 	if *fCountdown > 0 {
-		countDown = true
-		end = now.Add(*fCountdown)
+		cfg.countDown = true
+		cfg.end = now.Add(*fCountdown)
 	}
 	if *fUntil != "" {
-		countDown = true
+		cfg.countDown = true
 		var err error
-		end, err = duration.ParseDateTime(now, *fUntil)
+		cfg.end, err = duration.ParseDateTime(now, *fUntil)
 		if err != nil {
 			return log.FErrf("Invalid until time: %v", err)
 		}
 	}
-	if countDown && showText && cfg.text == "" {
-		toStr := end.Format(format)
-		if end.Sub(now) >= 24*time.Hour {
-			toStr = fmt.Sprintf("%s %s", end.Format("2006-01-02"), toStr)
+	if cfg.countDown && showText && cfg.text == "" {
+		toStr := cfg.end.Format(cfg.format)
+		if cfg.end.Sub(now) >= 24*time.Hour {
+			toStr = fmt.Sprintf("%s %s", cfg.end.Format("2006-01-02"), toStr)
 		}
 		extra := ""
-		if !*f24 && end.Hour() >= 12 {
+		if !*f24 && cfg.end.Hour() >= 12 {
 			extra = " pm"
 		}
 		cfg.text = "Countdown to " + toStr + extra
@@ -302,11 +302,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		cfg.blendingFunction = ansipixels.BlendLinear
 	} else {
 		cfg.blendingFunction = ansipixels.BlendNSRGB
-	}
-	if cfg.ap.TrueColor {
-		cfg.blackBG = tcolor.RGBColor{}.Background()
-	} else {
-		cfg.blackBG = tcolor.Black.Background()
 	}
 	if cfg.breath {
 		color, _ := tcolor.FromString(*fColor)
@@ -333,49 +328,88 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		}
 		cfg.colorDisc = RGBColor(color)
 	}
-	ap.HideCursor()
-	cfg.ClearScreen()
-	trackMouse := false
-	bounceSpeed := *fBounce
-	bounce := (bounceSpeed > 0)
-	if !bounce {
-		ap.MouseTrackingOn()
-		trackMouse = true
+	ap := ansipixels.NewAnsiPixels(60)
+	cfg.ap = ap
+
+	if flag.NArg() == 1 {
+		numStr := flag.Arg(0)
+		if numStr == "-" {
+			return StdinTail(cfg.Tail())
+		}
+		if len(numStr) == 0 || numStr[0] < '0' || numStr[0] > '9' {
+			cli.ErrUsage("No arguments, or <digits> or -")
+			return 1
+		}
+		fmt.Println(TimeString(numStr, false))
+		return 0
 	}
-	_ = ap.GetSize()
-	var prevNow time.Time
-	prev := ""
-	ap.OnResize = func() error {
-		cfg.ClearScreen()
-		cfg.DrawAt(-1, -1, TimeString(prev, false))
-		return nil
-	}
-	blinkEnabled := !*fNoBlink
-	blink := false
-	// TODO: how to get initial mouse position?
-	x, y := ap.Mx, ap.My
-	frame := 0
-	if *fFillBlack {
-		ap.Background = tcolor.RGBColor{}
-	} else {
-		ap.SyncBackgroundColor()
-	}
-	var tail io.Reader
-	var buf [4096]byte
-	writer := terminal.CRLFWriter{Out: ap.Out}
+
 	if *fTail != "" {
+		cfg.Tail()
+		if *fTail == "-" {
+			return StdinTail(cfg)
+		}
 		file, err := os.Open(*fTail)
 		if err != nil {
 			return log.FErrf("Error opening tail file: %v", err)
 		}
 		defer file.Close() // pointless in main but makes AI happy.
-		tail = file
-		cfg.topRight = true
-		cfg.colorDisc = tcolor.RGBColor{}
-		cfg.boxed = true
-		ap.MouseTrackingOff()
+		cfg.tail = file
 		ap.MoveCursor(0, 0)
 		ap.SaveCursorPos()
+	}
+	if err := ap.Open(); err != nil {
+		return log.FErrf("Error opening terminal: %v", err)
+	}
+	cfg.extraNewLinesAtEnd = true
+	defer func() {
+		if cfg.extraNewLinesAtEnd {
+			fmt.Fprintf(ap.Out, "\r\n\n\n\n")
+		}
+		ap.ShowCursor()
+		ap.MouseTrackingOff()
+		ap.EndSyncMode()
+		ap.Restore()
+	}()
+	if cfg.ap.TrueColor {
+		cfg.blackBG = tcolor.RGBColor{}.Background()
+	} else {
+		cfg.blackBG = tcolor.Black.Background()
+	}
+	if !cfg.topRight {
+		ap.HideCursor()
+	}
+	cfg.ClearScreen()
+	if (cfg.bounceSpeed <= 0) && !cfg.topRight {
+		ap.MouseTrackingOn()
+		cfg.trackMouse = true
+	}
+	_ = ap.GetSize()
+	cfg.blinkEnabled = !*fNoBlink
+	if *fFillBlack {
+		ap.Background = tcolor.RGBColor{}
+	} else {
+		ap.SyncBackgroundColor()
+	}
+	return RawModeLoop(now, cfg)
+}
+
+//nolint:gocognit // yeah
+func RawModeLoop(now time.Time, cfg *Config) int {
+	var numStr string
+	ap := cfg.ap
+	var buf [4096]byte
+	writer := terminal.CRLFWriter{Out: ap.Out}
+	blink := false
+	var prevNow time.Time
+	// TODO: how to get initial mouse position?
+	x, y := ap.Mx, ap.My
+	frame := 0
+	prev := ""
+	ap.OnResize = func() error {
+		cfg.ClearScreen()
+		cfg.DrawAt(-1, -1, TimeString(prev, false))
+		return nil
 	}
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
@@ -384,53 +418,53 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		}
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
-			if countDown {
-				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", now.Format(format))
+			if cfg.countDown {
+				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", now.Format(cfg.format))
 				return 1
 			}
 			return 0
 		}
 		// Click to place the time at the mouse position (or switch back to move with mouse).
 		if ap.LeftClick() && ap.MouseRelease() {
-			trackMouse = !trackMouse
+			cfg.trackMouse = !cfg.trackMouse
 		}
 		doDraw := cfg.breath
 		now := time.Now()
-		if countDown {
-			left := end.Sub(now).Round(time.Second)
+		if cfg.countDown {
+			left := cfg.end.Sub(now).Round(time.Second)
 			if left < 0 {
-				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(format))
-				extraNewLinesAtEnd = false
+				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(cfg.format))
+				cfg.extraNewLinesAtEnd = false
 				return 0
 			}
-			numStr = DurationString(left, seconds)
+			numStr = DurationString(left, cfg.seconds)
 		} else {
-			numStr = now.Format(format)
+			numStr = now.Format(cfg.format)
 		}
 		if numStr != prev {
 			doDraw = true
 		}
 		prev = numStr
 		now = now.Truncate(time.Second) // change only when seconds change
-		if now != prevNow && blinkEnabled {
+		if now != prevNow && cfg.blinkEnabled {
 			blink = !blink
 			doDraw = true
 		}
 		prevNow = now
 		switch {
-		case bounce:
-			if frame%bounceSpeed == 0 {
+		case (cfg.bounceSpeed > 0):
+			if frame%cfg.bounceSpeed == 0 {
 				cfg.bounce++
 				doDraw = true
 			}
 			frame++
-		case trackMouse && (ap.Mx != x || ap.My != y):
+		case cfg.trackMouse && (ap.Mx != x || ap.My != y):
 			x, y = ap.Mx, ap.My
 			doDraw = true
 		}
 		n := 0
-		if tail != nil {
-			n, err = tail.Read(buf[:])
+		if cfg.tail != nil {
+			n, err = cfg.tail.Read(buf[:])
 			if err != nil && !errors.Is(err, io.EOF) {
 				return log.FErrf("Error reading tail file: %v", err)
 			}
@@ -438,17 +472,17 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		if doDraw || n > 0 {
 			cfg.frame++
 			ap.StartSyncMode()
-			if tail == nil {
+			if cfg.tail == nil {
 				cfg.ClearScreen()
 			}
 			if n > 0 {
-				ap.RestoreCursorPos()
 				_, _ = writer.Write(buf[:n])
 				ap.SaveCursorPos()
 			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
 			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))
+			ap.RestoreCursorPos()
 			ap.EndSyncMode()
 		}
 	}

@@ -74,7 +74,7 @@ flags:
   -radius float
         Radius of the disc around the time in proportion of the time width (default 1.2)
   -tail filename
-        Tail the given filename while showing the clock
+        Tail the given filename while showing the clock, or `-` for stdin
   -text string
         Text to display below the clock (during countdown will be the target time, use
       none for no extra text)
@@ -120,4 +120,7 @@ tclock -until "2025-12-25 15:05:00"
 tclock -countdown 5m -text "Shutdown countdown, Q to abort" && shutdown -r now
 # Check the time in New-York (US East coast time):
 TZ=America/New_York tclock
+# Tail a file while also showing the clock (non raw mode)
+tclock - < /var/log/system.log
+(sleep 2; echo foo; sleep 1; echo bar) | tclock -
 ```
