@@ -221,7 +221,8 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
-	cli.ArgsHelp = " [digits:digits...]\npass only flags will display current time; move mouse and click to place on screen"
+	cli.ArgsHelp = " [digits:digits... or - for stdin tailing]\n" +
+		"pass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")

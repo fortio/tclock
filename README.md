@@ -74,7 +74,7 @@ flags:
   -radius float
         Radius of the disc around the time in proportion of the time width (default 1.2)
   -tail filename
-        Tail the given filename while showing the clock
+        Tail the given filename while showing the clock, or `-` for stdin
   -text string
         Text to display below the clock (during countdown will be the target time, use
       none for no extra text)
