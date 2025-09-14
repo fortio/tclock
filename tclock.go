@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"strings"
@@ -12,6 +14,7 @@ import (
 	"fortio.org/duration"
 	"fortio.org/log"
 	"fortio.org/tclock/bignum"
+	"fortio.org/terminal"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
@@ -45,6 +48,8 @@ type Config struct {
 	blendingFunction func(tcolor.RGBColor, tcolor.RGBColor, float64) tcolor.RGBColor
 	// Extra text (countdown)
 	text string
+	// In tail mode we stick the clock at the top right of the screen.
+	topRight bool
 }
 
 func bounce(frame, maximum int) int {
@@ -80,6 +85,10 @@ func (c *Config) DrawAt(x, y int, str string) {
 		// center
 		x = c.ap.W/2 + width/2
 		y = c.ap.H/2 + height/2 + 1
+	}
+	if c.topRight {
+		x = c.ap.W - 1
+		y = height - 1
 	}
 	// We are in 0.0 coordinates, but on apple terminal for instance the mouse can go past the width (!)
 	// so clamp to valid screen dimensions.
@@ -215,8 +224,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"Text to display below the clock (during countdown will be the target time, use none for no extra text)")
 	fUntil := flag.String("until", "",
 		"If set, countdown until this `date/time` (\"YYYY-MM-DD HH:MM:SS\" or for instance \"3:05 pm\") instead of showing the time")
+	fTail := flag.String("tail", "",
+		"Tail the given `filename` while showing the clock")
 	cli.Main()
-
 	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	var numStr string
 	if flag.NArg() == 1 {
@@ -237,6 +247,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		fmt.Fprintf(os.Stderr, "Error opening terminal: %v\n", err)
 		os.Exit(1)
 	}
+	writer := terminal.CRLFWriter{Out: ap.Out}
 	extraNewLinesAtEnd := true
 	defer func() {
 		if extraNewLinesAtEnd {
@@ -350,6 +361,20 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	} else {
 		ap.SyncBackgroundColor()
 	}
+	var tail io.Reader
+	var buf [4096]byte
+	if *fTail != "" {
+		file, err := os.Open(*fTail)
+		if err != nil {
+			return log.FErrf("Error opening tail file: %v", err)
+		}
+		tail = file
+		cfg.topRight = true
+		cfg.colorDisc = tcolor.RGBColor{}
+		cfg.boxed = true
+		ap.MouseTrackingOff()
+	}
+	prevX, prevY := 0, 0
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
@@ -401,10 +426,24 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 			x, y = ap.Mx, ap.My
 			doDraw = true
 		}
-		if doDraw {
+		n := 0
+		if tail != nil {
+			n, err = tail.Read(buf[:])
+			if err != nil && !errors.Is(err, io.EOF) {
+				return log.FErrf("Error reading tail file: %v", err)
+			}
+		}
+		if doDraw || n > 0 {
 			cfg.frame++
 			ap.StartSyncMode()
-			cfg.ClearScreen()
+			if tail == nil {
+				cfg.ClearScreen()
+			}
+			if n > 0 {
+				ap.MoveCursor(prevX, prevY) // back to where we left off
+				_, _ = writer.Write(buf[:n])
+				prevX, prevY, _ = ap.ReadCursorPosXY()
+			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
 			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))

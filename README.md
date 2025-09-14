@@ -8,6 +8,7 @@ Terminal Clock using Ansipixels library
 
 ![Example Screen Shot](screenshot.png)
 
+And now you can use it as replacement for `tail -f` with the clock ticking on top of your log tailing.
 
 ## Install
 You can get the binary from [releases](https://github.com/fortio/tclock/releases)
@@ -72,6 +73,8 @@ flags:
         Don't show seconds
   -radius float
         Radius of the disc around the time in proportion of the time width (default 1.2)
+  -tail filename
+        Tail the given filename while showing the clock
   -text string
         Text to display below the clock (during countdown will be the target time, use
       none for no extra text)
