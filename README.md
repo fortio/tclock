@@ -120,4 +120,7 @@ tclock -until "2025-12-25 15:05:00"
 tclock -countdown 5m -text "Shutdown countdown, Q to abort" && shutdown -r now
 # Check the time in New-York (US East coast time):
 TZ=America/New_York tclock
+# Tail a file while also showing the clock (non raw mode)
+tclock - < /var/log/system.log
+(sleep 2; echo foo; sleep 1; echo bar) | tclock -
 ```
