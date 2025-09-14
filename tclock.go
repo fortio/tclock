@@ -255,17 +255,18 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		format = "15:04"
 	}
 	cfg := &Config{
-		boxed:       *fBox,
-		inverse:     *fInverse,
-		debug:       *fDebug,
-		breath:      *fBreath,
-		colorOutput: colorOutput,
-		radius:      *fRadius,
-		fillBlack:   *fFillBlack,
-		aliasing:    *fAliasing,
-		format:      format,
-		seconds:     !*fNoSeconds,
-		bounceSpeed: *fBounce,
+		boxed:        *fBox,
+		inverse:      *fInverse,
+		debug:        *fDebug,
+		breath:       *fBreath,
+		colorOutput:  colorOutput,
+		radius:       *fRadius,
+		fillBlack:    *fFillBlack,
+		aliasing:     *fAliasing,
+		format:       format,
+		seconds:      !*fNoSeconds,
+		bounceSpeed:  *fBounce,
+		blinkEnabled: !*fNoBlink,
 	}
 	if cfg.seconds {
 		cfg.format += ":05"
@@ -330,6 +331,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	cfg.ap = ap
+	_ = ap.GetSize()
 
 	if flag.NArg() == 1 {
 		numStr := flag.Arg(0)
@@ -384,8 +386,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		ap.MouseTrackingOn()
 		cfg.trackMouse = true
 	}
-	_ = ap.GetSize()
-	cfg.blinkEnabled = !*fNoBlink
 	if *fFillBlack {
 		ap.Background = tcolor.RGBColor{}
 	} else {

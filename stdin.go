@@ -22,7 +22,6 @@ func StdinTail(cfg *Config) int {
 	var buf [4096]byte
 	ap.Out = bufio.NewWriter(os.Stdout)
 	defer ap.Out.Flush()
-	_ = ap.GetSize()
 	blink := false
 	var prevNow time.Time
 	prev := ""
