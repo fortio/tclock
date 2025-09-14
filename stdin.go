@@ -22,7 +22,6 @@ func StdinTail(cfg *Config) int {
 	_ = ap.GetSize()
 	blink := false
 	var prevNow time.Time
-	frame := 0
 	prev := ""
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -57,15 +56,12 @@ func StdinTail(cfg *Config) int {
 		}
 		prevNow = now
 		n, err := reader.Read(buf[:])
-		if err != nil && !errors.Is(err, io.EOF) {
-			return log.FErrf("Error reading stdin: %v", err)
-		}
-		if cfg.bounceSpeed > 0 {
-			if frame%cfg.bounceSpeed == 0 {
-				cfg.bounce++
-				doDraw = true
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				log.LogVf("Stdin closed")
+				return 0
 			}
-			frame++
+			return log.FErrf("Error reading stdin: %v", err)
 		}
 		if doDraw || n > 0 {
 			cfg.frame++
