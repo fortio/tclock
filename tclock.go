@@ -247,7 +247,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		fmt.Fprintf(os.Stderr, "Error opening terminal: %v\n", err)
 		os.Exit(1)
 	}
-	writer := terminal.CRLFWriter{Out: ap.Out}
 	extraNewLinesAtEnd := true
 	defer func() {
 		if extraNewLinesAtEnd {
@@ -363,6 +362,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	var tail io.Reader
 	var buf [4096]byte
+	writer := terminal.CRLFWriter{Out: ap.Out}
 	if *fTail != "" {
 		file, err := os.Open(*fTail)
 		if err != nil {
@@ -374,8 +374,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		cfg.colorDisc = tcolor.RGBColor{}
 		cfg.boxed = true
 		ap.MouseTrackingOff()
+		ap.MoveCursor(0, 0)
+		ap.SaveCursorPos()
 	}
-	prevX, prevY := 0, 0
 	for {
 		_, err := ap.ReadOrResizeOrSignalOnce()
 		if err != nil {
@@ -441,9 +442,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 				cfg.ClearScreen()
 			}
 			if n > 0 {
-				ap.MoveCursor(prevX, prevY) // back to where we left off
+				ap.RestoreCursorPos()
 				_, _ = writer.Write(buf[:n])
-				prevX, prevY, _ = ap.ReadCursorPosXY()
+				ap.SaveCursorPos()
 			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
