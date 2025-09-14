@@ -371,7 +371,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		ap.EndSyncMode()
 		ap.Restore()
 	}()
-	cfg.ap = ap
 	if cfg.ap.TrueColor {
 		cfg.blackBG = tcolor.RGBColor{}.Background()
 	} else {
