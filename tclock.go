@@ -255,17 +255,19 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		format = "15:04"
 	}
 	cfg := &Config{
-		boxed:       *fBox,
-		inverse:     *fInverse,
-		debug:       *fDebug,
-		breath:      *fBreath,
-		colorOutput: colorOutput,
-		radius:      *fRadius,
-		fillBlack:   *fFillBlack,
-		aliasing:    *fAliasing,
-		format:      format,
-		seconds:     !*fNoSeconds,
-		bounceSpeed: *fBounce,
+		boxed:              *fBox,
+		inverse:            *fInverse,
+		debug:              *fDebug,
+		breath:             *fBreath,
+		colorOutput:        colorOutput,
+		radius:             *fRadius,
+		fillBlack:          *fFillBlack,
+		aliasing:           *fAliasing,
+		format:             format,
+		seconds:            !*fNoSeconds,
+		bounceSpeed:        *fBounce,
+		blinkEnabled:       !*fNoBlink,
+		extraNewLinesAtEnd: true,
 	}
 	if cfg.seconds {
 		cfg.format += ":05"
@@ -330,6 +332,13 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	cfg.ap = ap
+	_ = ap.GetSize()
+	if cfg.ap.TrueColor {
+		cfg.blackBG = tcolor.RGBColor{}.Background()
+	} else {
+		cfg.blackBG = tcolor.Black.Background()
+	}
+	ap.Background = tcolor.RGBColor{}
 
 	if flag.NArg() == 1 {
 		numStr := flag.Arg(0)
@@ -355,13 +364,12 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		}
 		defer file.Close() // pointless in main but makes AI happy.
 		cfg.tail = file
-		ap.MoveCursor(0, 0)
 		ap.SaveCursorPos()
+		cfg.extraNewLinesAtEnd = false
 	}
 	if err := ap.Open(); err != nil {
 		return log.FErrf("Error opening terminal: %v", err)
 	}
-	cfg.extraNewLinesAtEnd = true
 	defer func() {
 		if cfg.extraNewLinesAtEnd {
 			fmt.Fprintf(ap.Out, "\r\n\n\n\n")
@@ -371,25 +379,16 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		ap.EndSyncMode()
 		ap.Restore()
 	}()
-	if cfg.ap.TrueColor {
-		cfg.blackBG = tcolor.RGBColor{}.Background()
-	} else {
-		cfg.blackBG = tcolor.Black.Background()
-	}
 	if !cfg.topRight {
 		ap.HideCursor()
+		if !cfg.fillBlack {
+			ap.SyncBackgroundColor()
+		}
+		cfg.ClearScreen()
 	}
-	cfg.ClearScreen()
 	if (cfg.bounceSpeed <= 0) && !cfg.topRight {
 		ap.MouseTrackingOn()
 		cfg.trackMouse = true
-	}
-	_ = ap.GetSize()
-	cfg.blinkEnabled = !*fNoBlink
-	if *fFillBlack {
-		ap.Background = tcolor.RGBColor{}
-	} else {
-		ap.SyncBackgroundColor()
 	}
 	return RawModeLoop(now, cfg)
 }
