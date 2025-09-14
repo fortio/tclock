@@ -368,6 +368,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		if err != nil {
 			return log.FErrf("Error opening tail file: %v", err)
 		}
+		defer file.Close() // pointless in main but makes AI happy.
 		tail = file
 		cfg.topRight = true
 		cfg.colorDisc = tcolor.RGBColor{}
