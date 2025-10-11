@@ -98,4 +98,5 @@ func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now t
 	drawLine(c.ap, sx, sy, cx, cy, tcolor.RGBColor{R: 0, G: 0, B: 255}, background)
 	drawLine(c.ap, mx, my, cx, cy, tcolor.RGBColor{R: 0, G: 255, B: 0}, background)
 	drawLine(c.ap, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0, B: 0}, background)
+	c.ap.WriteString(tcolor.Reset)
 }
