@@ -148,7 +148,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		prefix = c.colorOutput.Foreground(c.breathColor())
 	}
 	if c.inverse {
-		prefix = ansipixels.Inverse + c.color
+		prefix = tcolor.Inverse + c.color
 	}
 	suffix := ""
 	if c.fillBlack {
