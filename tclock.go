@@ -32,6 +32,7 @@ type Config struct {
 	boxed       bool
 	color       string
 	colorBox    string
+	clockHands  bool
 	inverse     bool
 	debug       bool
 	bounce      int             // bounce counter, 0 means no bouncing
@@ -79,8 +80,7 @@ func (c *Config) breathColor() tcolor.Color {
 	alpha := 0.15 + 0.85*float64(bounce(c.frame, spread))/float64(spread)
 	return c.blendingFunction(c.ap.Background, c.bcolor, alpha).Color()
 }
-
-func (c *Config) DrawAt(x, y int, str string) {
+func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 	if c.debug {
 		c.ap.DrawSquareBox(0, 0, c.ap.W, c.ap.H)
 		c.ap.WriteAt(0, c.ap.H-1, "Mouse %d, %d [%dx%d]", c.ap.Mx, c.ap.My, c.ap.W, c.ap.H)
@@ -128,6 +128,11 @@ func (c *Config) DrawAt(x, y int, str string) {
 			radius = (2 * (height + 1)) / 2
 		}
 		c.ap.DiscBlendFN(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
+		c.ap.DiscNSRGB(x-width/2-1, y-height/2-1, radius, tcolor.RGBColor{R: 0, G: 0, B: 0}, tcolor.RGBColor{R: 255, G: 255, B: 255}, 0)
+		if c.clockHands {
+			c.DrawClock(radius, x-width/2-1, y-height/2-1, now)
+			return
+		}
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -225,6 +230,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"pass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
+	hands := flag.Bool("analog", false, "use clock with minute and seconds and hours hands")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
@@ -268,6 +274,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		bounceSpeed:        *fBounce,
 		blinkEnabled:       !*fNoBlink,
 		extraNewLinesAtEnd: true,
+		clockHands:         *hands,
 	}
 	if cfg.seconds {
 		cfg.format += ":05"
@@ -407,7 +414,7 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 	prev := ""
 	ap.OnResize = func() error {
 		cfg.ClearScreen()
-		cfg.DrawAt(-1, -1, TimeString(prev, false))
+		cfg.DrawAt(-1, -1, TimeString(prev, false), now)
 		return nil
 	}
 	for {
@@ -480,9 +487,148 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
-			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))
+			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink), now)
 			ap.RestoreCursorPos()
 			ap.EndSyncMode()
 		}
 	}
+}
+
+func rotateFrom12(theta float64) (float64, float64) {
+	return -math.Sin(theta), -math.Cos(theta)
+}
+
+func unitCircleCoordsForClockHands(seconds, minutes, hours int) (float64, float64, float64, float64, float64, float64) {
+	secondsAngleFrom12 := 2. * math.Pi * (60. - float64(seconds)) / 60.
+	minutesAngleFrom12 := 2. * math.Pi * (60. - float64(minutes)) / 60. //+ (secondsAngleFrom12 / (2 * math.Pi))
+	hoursAngleFrom12 := 2. * math.Pi * (12. - float64(hours)) / 12.     //+ (minutesAngleFrom12 / (2 * math.Pi))
+	x1, y1 := rotateFrom12(secondsAngleFrom12)
+	x2, y2 := rotateFrom12(minutesAngleFrom12)
+	x3, y3 := rotateFrom12(hoursAngleFrom12)
+	return x1, y1, x2, y2, x3, y3
+}
+
+func (c *Config) DrawClock(radius, cx, cy int, now time.Time) {
+	sec, minute, hour := now.Second(), now.Minute(), now.Hour()
+	sx, sy, mx, my, hx, hy := unitCircleCoordsForClockHands(sec, minute, hour)
+	sx, sy = sx*.9, sy*.9
+	mx, my = mx*0.75, my*0.75
+	hx, hy = hx*0.5, hy*0.5
+	cy *= 2
+	drawLine(c.ap, sx, sy*2, cx, cy, radius/2, tcolor.Blue.Color())
+	drawLine(c.ap, mx, my*2, cx, cy, radius/2, tcolor.Green.Color())
+	drawLine(c.ap, hx, hy*2, cx, cy, radius/2, tcolor.Red.Color())
+}
+
+func drawLineHigh(ap *ansipixels.AnsiPixels, x1, y1, x2, y2 int) map[[2]int]struct{} {
+	//bresenham's algorithm
+	ap.StartSyncMode()
+	defer ap.EndSyncMode()
+	dx, dy := x2-x1, y2-y1
+	x, y := x1, y1
+	dy1 := 1
+	dx1 := 1
+	if y2 < y1 {
+		dy1 = -1
+	}
+	if x2 < x1 {
+		dx1 = -1
+		dx = -dx
+	}
+	pixels := make(map[[2]int]struct{})
+
+	p := 2*dx - dy
+	for y = y1; y != y2; y += dy1 {
+		if p > 0 {
+			x += dx1
+			p += 2 * (dx - dy)
+			// ap.WriteAt(x, y, "%s ", color.Background())
+			pixels[[2]int{x, y}] = struct{}{}
+			continue
+		}
+		p += 2 * dx
+		// ap.WriteAt(x, y, "%s ", color.Background())
+		pixels[[2]int{x, y}] = struct{}{}
+	}
+	return pixels
+}
+func drawLineLow(ap *ansipixels.AnsiPixels, x1, y1, x2, y2 int) map[[2]int]struct{} {
+	//bresenham's algorithm
+	ap.StartSyncMode()
+	defer ap.EndSyncMode()
+	pixels := make(map[[2]int]struct{})
+	dx, dy := x2-x1, y2-y1
+	y := y1
+	dy1 := 1
+	dx1 := 1
+	if y2 < y1 {
+		dy1 = -1
+		dy = -dy
+	}
+	if x2 < x1 {
+		dx1 = -1
+		dx = -dx
+	}
+
+	p := 2*dy - dx
+	for x := x1; x != x2; x += dx1 {
+		if p > 0 {
+			y += dy1
+			p += 2 * (dy - dx)
+			// ap.WriteAt(x, y, "%s ", color.Background())
+			pixels[[2]int{x, y}] = struct{}{}
+			continue
+		}
+		p += 2 * dy
+		// ap.WriteAt(x, y, "%s ", color.Background())
+		pixels[[2]int{x, y}] = struct{}{}
+	}
+	return pixels
+}
+
+func drawLine(ap *ansipixels.AnsiPixels, sx, sy float64, cx, cy, radius int, color tcolor.Color) {
+
+	x0, y0 := cx, cy
+	x1 := x0 + int(sx*float64(radius)*2-1)
+	y1 := y0 + int(sy*float64(radius)-1)
+	var pix map[[2]int]struct{}
+	if max(y0-y1, y1-y0) < max(x0-x1, x1-x0) {
+		if x1 > x0 {
+			pix = drawLineLow(ap, x0, y0, x1, y1)
+		} else {
+			pix = drawLineLow(ap, x1, y1, x0, y0)
+		}
+	} else {
+		if y1 > y0 {
+			pix = drawLineHigh(ap, x0, y0, x1, y1)
+		} else {
+			pix = drawLineHigh(ap, x1, y1, x0, y0)
+		}
+	}
+	drawPixels(ap, pix, color)
+}
+
+func drawPixels(ap *ansipixels.AnsiPixels, pixels map[[2]int]struct{}, color tcolor.Color) {
+	for coordAry := range pixels {
+		x, y := coordAry[0], coordAry[1]
+		switch y % 2 {
+		case 0:
+
+			lower := [2]int{x, y + 1}
+			_, ok := pixels[lower]
+			if ok {
+				ap.WriteAt(x, y/2, "%s%s%c", color.Foreground(), tcolor.RGBColor{R: 255, G: 255, B: 255}.Background(), ansipixels.FullPixel)
+			} else {
+				ap.WriteAt(x, y/2, "%s%s%c", color.Foreground(), tcolor.RGBColor{R: 255, G: 255, B: 255}.Background(), ansipixels.TopHalfPixel)
+
+			}
+		case 1:
+			upper := [2]int{x, y - 1}
+			_, ok := pixels[upper]
+			if !ok {
+				ap.WriteAt(x, y/2, "%s%s%c", color.Foreground(), tcolor.RGBColor{R: 255, G: 255, B: 255}.Background(), ansipixels.BottomHalfPixel)
+			}
+		}
+	}
+
 }

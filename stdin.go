@@ -71,7 +71,7 @@ func StdinTail(cfg *Config) int {
 				_, _ = ap.Out.Write(buf[:n])
 				ap.SaveCursorPos()
 			}
-			cfg.DrawAt(-1, -1, TimeString(numStr, blink))
+			cfg.DrawAt(-1, -1, TimeString(numStr, blink), now)
 			ap.RestoreCursorPos()
 			ap.EndSyncMode()
 		}
