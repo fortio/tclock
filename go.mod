@@ -11,6 +11,7 @@ require (
 
 require (
 	fortio.org/safecast v1.2.0 // indirect
+	fortio.org/sets v1.3.0 // indirect
 	fortio.org/struct2env v0.4.2 // indirect
 	fortio.org/version v1.0.4 // indirect
 	github.com/jbuchbinder/gopnm v0.0.0-20220507095634-e31f54490ce0 // indirect

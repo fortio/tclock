@@ -3,107 +3,64 @@ package main
 import (
 	"math"
 
+	"fortio.org/sets"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
-
-func drawLineHigh(ap *ansipixels.AnsiPixels, x1, y1, x2, y2 int) map[[2]int]struct{} {
-	//bresenham's algorithm
-	ap.StartSyncMode()
-	defer ap.EndSyncMode()
-	dx, dy := x2-x1, y2-y1
-	x, y := x1, y1
-	dy1 := 1
-	dx1 := 1
-	if y2 < y1 {
-		dy1 = -1
-	}
-	if x2 < x1 {
-		dx1 = -1
-		dx = -dx
-	}
-	pixels := make(map[[2]int]struct{})
-
-	p := 2*dx - dy
-	for y = y1; y != y2; y += dy1 {
-		if p > 0 {
-			x += dx1
-			p += 2 * (dx - dy)
-			// ap.WriteAt(x, y, "%s ", color.Background())
-			pixels[[2]int{x, y}] = struct{}{}
-			continue
-		}
-		p += 2 * dx
-		// ap.WriteAt(x, y, "%s ", color.Background())
-		pixels[[2]int{x, y}] = struct{}{}
-	}
-	return pixels
-}
-func drawLineLow(ap *ansipixels.AnsiPixels, x1, y1, x2, y2 int) map[[2]int]struct{} {
-	//bresenham's algorithm
-	ap.StartSyncMode()
-	defer ap.EndSyncMode()
-	pixels := make(map[[2]int]struct{})
-	dx, dy := x2-x1, y2-y1
-	y := y1
-	dy1 := 1
-	dx1 := 1
-	if y2 < y1 {
-		dy1 = -1
-		dy = -dy
-	}
-	if x2 < x1 {
-		dx1 = -1
-		dx = -dx
-	}
-
-	p := 2*dy - dx
-	for x := x1; x != x2; x += dx1 {
-		if p > 0 {
-			y += dy1
-			p += 2 * (dy - dx)
-			// ap.WriteAt(x, y, "%s ", color.Background())
-			pixels[[2]int{x, y}] = struct{}{}
-			continue
-		}
-		p += 2 * dy
-		// ap.WriteAt(x, y, "%s ", color.Background())
-		pixels[[2]int{x, y}] = struct{}{}
-	}
-	return pixels
-}
 
 func drawLine(ap *ansipixels.AnsiPixels, sx, sy float64, cx, cy, radius int, color tcolor.Color) {
 
 	x0, y0 := cx, cy
 	x1 := x0 + int(sx*float64(radius)*2-1)
 	y1 := y0 + int(sy*float64(radius)-1)
-	var pix map[[2]int]struct{}
-	if max(y0-y1, y1-y0) < max(x0-x1, x1-x0) {
-		if x1 > x0 {
-			pix = drawLineLow(ap, x0, y0, x1, y1)
+	pix := sets.New[[2]int]()
+	x0i, y0i := x0, y0
+	x1i, y1i := x1, y1
+
+	steep := math.Abs(float64(y1i-y0i)) > math.Abs(float64(x1i-x0i))
+	if steep {
+		x0i, y0i = y0i, x0i
+		x1i, y1i = y1i, x1i
+	}
+
+	if x0i > x1i {
+		x0i, x1i = x1i, x0i
+		y0i, y1i = y1i, y0i
+	}
+
+	dx := x1i - x0i
+	dy := math.Abs(float64(y1i - y0i))
+	err := float64(dx) / 2.0
+	yStep := 1
+	if y0i > y1i {
+		yStep = -1
+	}
+
+	y := y0i
+	for x := x0i; x <= x1i; x++ {
+		if steep {
+			pix.Add([2]int{y, x})
 		} else {
-			pix = drawLineLow(ap, x1, y1, x0, y0)
+			pix.Add([2]int{x, y})
 		}
-	} else {
-		if y1 > y0 {
-			pix = drawLineHigh(ap, x0, y0, x1, y1)
-		} else {
-			pix = drawLineHigh(ap, x1, y1, x0, y0)
+		err -= dy
+		if err < 0 {
+			y += yStep
+			err += float64(dx)
 		}
 	}
+
 	drawPixels(ap, pix, color)
 }
 
-func drawPixels(ap *ansipixels.AnsiPixels, pixels map[[2]int]struct{}, color tcolor.Color) {
+func drawPixels(ap *ansipixels.AnsiPixels, pixels sets.Set[[2]int], color tcolor.Color) {
 	for coordAry := range pixels {
 		x, y := coordAry[0], coordAry[1]
 		switch y % 2 {
 		case 0:
 
 			lower := [2]int{x, y + 1}
-			_, ok := pixels[lower]
-			if ok {
+			if pixels.Has(lower) {
 				ap.WriteAt(x, y/2, "%s%s%c", color.Foreground(), tcolor.RGBColor{R: 255, G: 255, B: 255}.Background(), ansipixels.FullPixel)
 			} else {
 				ap.WriteAt(x, y/2, "%s%s%c", color.Foreground(), tcolor.RGBColor{R: 255, G: 255, B: 255}.Background(), ansipixels.TopHalfPixel)
@@ -111,8 +68,7 @@ func drawPixels(ap *ansipixels.AnsiPixels, pixels map[[2]int]struct{}, color tco
 			}
 		case 1:
 			upper := [2]int{x, y - 1}
-			_, ok := pixels[upper]
-			if !ok {
+			if !pixels.Has(upper) {
 				ap.WriteAt(x, y/2, "%s%s%c", color.Foreground(), tcolor.RGBColor{R: 255, G: 255, B: 255}.Background(), ansipixels.BottomHalfPixel)
 			}
 		}
