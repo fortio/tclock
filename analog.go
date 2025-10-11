@@ -124,12 +124,10 @@ func rotateFrom12(theta float64) (float64, float64) {
 	return -math.Sin(theta), -math.Cos(theta)
 }
 
-func unitCircleCoordsForClockHands(seconds, minutes, hours int) (float64, float64, float64, float64, float64, float64) {
-	secondsAngleFrom12 := 2. * math.Pi * (60. - float64(seconds)) / 60.
-	minutesAngleFrom12 := 2. * math.Pi * (60. - float64(minutes)) / 60.
-	hoursAngleFrom12 := 2. * math.Pi * (12. - float64(hours)) / 12.
-	x1, y1 := rotateFrom12(secondsAngleFrom12)
-	x2, y2 := rotateFrom12(minutesAngleFrom12)
-	x3, y3 := rotateFrom12(hoursAngleFrom12)
-	return x1, y1, x2, y2, x3, y3
+func calculateAngle(timeValue int) float64 {
+	return 2. * math.Pi * (60. - float64(timeValue)) / 60
+}
+
+func angleCoords(timeValue int) (float64, float64) {
+	return rotateFrom12(calculateAngle(timeValue))
 }

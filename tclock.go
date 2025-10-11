@@ -509,7 +509,9 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 
 func (c *Config) DrawClock(radius, cx, cy int, now time.Time) {
 	sec, minute, hour := now.Second(), now.Minute(), now.Hour()
-	sx, sy, mx, my, hx, hy := unitCircleCoordsForClockHands(sec, minute, hour)
+	sx, sy := angleCoords(sec)
+	mx, my := angleCoords(minute)
+	hx, hy := angleCoords(hour)
 	sx, sy = sx*.9, sy*.9
 	mx, my = mx*0.75, my*0.75
 	hx, hy = hx*0.5, hy*0.5
