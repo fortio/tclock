@@ -516,7 +516,7 @@ func (c *Config) DrawClock(radius, cx, cy int, now time.Time) {
 	mx, my = mx*0.75, my*0.75
 	hx, hy = hx*0.5, hy*0.5
 	cy *= 2
-	drawLine(c.ap, sx, sy*2, cx, cy, radius/2, tcolor.Blue.Color())
-	drawLine(c.ap, mx, my*2, cx, cy, radius/2, tcolor.Green.Color())
-	drawLine(c.ap, hx, hy*2, cx, cy, radius/2, tcolor.Red.Color())
+	drawLine(c.ap, sx, sy*2, cx, cy+1, radius/2, tcolor.Blue.Color())
+	drawLine(c.ap, mx, my*2, cx, cy+1, radius/2, tcolor.Green.Color())
+	drawLine(c.ap, hx, hy*2, cx, cy+1, radius/2, tcolor.Red.Color())
 }
