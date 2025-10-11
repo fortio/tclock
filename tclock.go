@@ -32,7 +32,7 @@ type Config struct {
 	boxed       bool
 	color       string
 	colorBox    string
-	clockHands  bool
+	analog      bool
 	inverse     bool
 	debug       bool
 	bounce      int             // bounce counter, 0 means no bouncing
@@ -127,12 +127,13 @@ func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		if c.clockHands {
-			c.ap.DiscNSRGB(x-width/2-1, y-height/2-1, radius, tcolor.RGBColor{R: 0, G: 0, B: 0}, tcolor.RGBColor{R: 255, G: 255, B: 255}, 0)
-			c.DrawClock(radius, x-width/2-1, y-height/2-1, now)
+		cx := x - width/2 - 1
+		cy := y - height/2 - 1
+		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
+		if c.analog {
+			c.DrawClock(radius, cx, cy, c.colorDisc, now)
 			return
 		}
-		c.ap.DiscBlendFN(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -235,7 +236,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"pass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
-	hands := flag.Bool("analog", false, "use clock with minute and seconds and hours hands")
+	fAnalog := flag.Bool("analog", false, "use clock with minute and seconds and hours hands")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
@@ -277,7 +278,11 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		bounceSpeed:        *fBounce,
 		blinkEnabled:       !*fNoBlink,
 		extraNewLinesAtEnd: true,
-		clockHands:         *hands,
+		analog:             *fAnalog,
+	}
+	if cfg.analog {
+		cfg.aliasing /= 2 // sharper inside for hands.
+		cfg.radius *= 1.5 // bigger radius for analog
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	ap.TrueColor = *fTrueColor
@@ -505,18 +510,4 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 			ap.EndSyncMode()
 		}
 	}
-}
-
-func (c *Config) DrawClock(radius, cx, cy int, now time.Time) {
-	sec, minute, hour := now.Second(), now.Minute(), now.Hour()
-	sx, sy := angleCoords(sec)
-	mx, my := angleCoords(minute)
-	hx, hy := angleCoords(hour)
-	sx, sy = sx*.9, sy*.9
-	mx, my = mx*0.75, my*0.75
-	hx, hy = hx*0.5, hy*0.5
-	cy *= 2
-	drawLine(c.ap, sx, sy*2, cx, cy+1, radius/2, tcolor.Blue.Color())
-	drawLine(c.ap, mx, my*2, cx, cy+1, radius/2, tcolor.Green.Color())
-	drawLine(c.ap, hx, hy*2, cx, cy+1, radius/2, tcolor.Red.Color())
 }
