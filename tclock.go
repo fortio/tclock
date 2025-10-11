@@ -80,6 +80,7 @@ func (c *Config) breathColor() tcolor.Color {
 	alpha := 0.15 + 0.85*float64(bounce(c.frame, spread))/float64(spread)
 	return c.blendingFunction(c.ap.Background, c.bcolor, alpha).Color()
 }
+
 func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 	if c.debug {
 		c.ap.DrawSquareBox(0, 0, c.ap.W, c.ap.H)
@@ -131,7 +132,7 @@ func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 		cy := y - height/2 - 1
 		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 		if c.analog {
-			c.DrawClock(radius, cx, cy, c.colorDisc, now)
+			c.DrawHands(cx, cy, radius, c.colorDisc, now)
 			return
 		}
 	}
