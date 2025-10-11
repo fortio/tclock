@@ -213,11 +213,16 @@ func (c *Config) Tail() *Config {
 	return c
 }
 
+const (
+	trueColorDiscDefault   = "E0C020" // yellow/gold by default for true color
+	notrueColorDiscDefault = "FFFFFF" // gray scale for 256 colors mode as there are several gray levels but not many yellow
+)
+
 func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split the flags and rest.
 	truecolorDefault := ansipixels.DetectColorMode().TrueColor
-	discDefault := "E0C020"
+	discDefault := trueColorDiscDefault
 	if !truecolorDefault {
-		discDefault = "FFFFFF"
+		discDefault = notrueColorDiscDefault
 	}
 	cli.MinArgs = 0
 	cli.MaxArgs = 1
@@ -249,7 +254,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	fTail := flag.String("tail", "",
 		"Tail the given `filename` while showing the clock, or `-` for stdin")
 	cli.Main()
-	colorOutput := tcolor.ColorOutput{TrueColor: *fTrueColor}
 	format := "3:04"
 	if *f24 {
 		format = "15:04"
@@ -259,7 +263,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		inverse:            *fInverse,
 		debug:              *fDebug,
 		breath:             *fBreath,
-		colorOutput:        colorOutput,
 		radius:             *fRadius,
 		fillBlack:          *fFillBlack,
 		aliasing:           *fAliasing,
@@ -268,6 +271,19 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		bounceSpeed:        *fBounce,
 		blinkEnabled:       !*fNoBlink,
 		extraNewLinesAtEnd: true,
+	}
+	ap := ansipixels.NewAnsiPixels(60)
+	ap.TrueColor = *fTrueColor
+	cfg.ap = ap
+	colorDisc := *fColorDisc
+	if ap.TrueColor != truecolorDefault && colorDisc == discDefault {
+		// If we auto detected a change in true color mode, change the disc default too
+		// if it hasn't been set explicitly.
+		if ap.TrueColor {
+			colorDisc = trueColorDiscDefault
+		} else {
+			colorDisc = notrueColorDiscDefault
+		}
 	}
 	if cfg.seconds {
 		cfg.format += ":05"
@@ -313,25 +329,23 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		if err != nil {
 			return log.FErrf("Color error: %v", err)
 		}
-		cfg.color = colorOutput.Foreground(color)
+		cfg.color = ap.ColorOutput.Foreground(color)
 	}
 	if *fColorBox != "" {
 		color, err := tcolor.FromString(*fColorBox)
 		if err != nil {
 			return log.FErrf("Color box error: %v", err)
 		}
-		cfg.colorBox = colorOutput.Foreground(color)
+		cfg.colorBox = ap.ColorOutput.Foreground(color)
 		cfg.boxed = true // color box implies boxed
 	}
-	if *fColorDisc != "" {
-		color, err := tcolor.FromString(*fColorDisc)
+	if colorDisc != "" {
+		color, err := tcolor.FromString(colorDisc)
 		if err != nil {
 			return log.FErrf("Color disc error: %v", err)
 		}
 		cfg.colorDisc = RGBColor(color)
 	}
-	ap := ansipixels.NewAnsiPixels(60)
-	cfg.ap = ap
 	_ = ap.GetSize()
 	if cfg.ap.TrueColor {
 		cfg.blackBG = tcolor.RGBColor{}.Background()
@@ -352,7 +366,6 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		fmt.Println(TimeString(numStr, false))
 		return 0
 	}
-
 	if *fTail != "" {
 		cfg.Tail()
 		if *fTail == "-" {
