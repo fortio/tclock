@@ -85,7 +85,7 @@ const (
 	Width  = 4
 )
 
-// Line based version of Numbers with padding to fixed width.
+// NumberLines line by line based version of Numbers with padding to fixed width.
 var NumberLines []string
 
 func AddTrailingSpaces(s string, extra int) string {
