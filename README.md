@@ -10,6 +10,10 @@ Terminal Clock using Ansipixels library
 
 And now you can use it as replacement for `tail -f` with the clock ticking on top of your log tailing.
 
+There is also an analog version (`-analog`)
+![Analog](screenshotAnalog.png)
+
+
 ## Install
 You can get the binary from [releases](https://github.com/fortio/tclock/releases)
 
@@ -43,6 +47,8 @@ flags:
         Use 24-hour time format
   -aliasing float
         Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect) (default 0.8)
+  -analog
+        Analog clock with hours, minutes and seconds hands
   -black-bg
         Set a black background instead of using the terminal's background
   -bounce int
@@ -123,4 +129,8 @@ TZ=America/New_York tclock
 # Tail a file while also showing the clock (non raw mode)
 tclock - < /var/log/system.log
 (sleep 2; echo foo; sleep 1; echo bar) | tclock -
+# Analog mode
+tclock -analog
+# Analog without seconds (and no second dots)
+tclock -analog -no-seconds
 ```

@@ -32,6 +32,7 @@ type Config struct {
 	boxed       bool
 	color       string
 	colorBox    string
+	analog      bool
 	inverse     bool
 	debug       bool
 	bounce      int             // bounce counter, 0 means no bouncing
@@ -64,6 +65,8 @@ type Config struct {
 	blinkEnabled bool
 	// Show seconds
 	seconds bool
+	// for analog, current time
+	now time.Time
 }
 
 func bounce(frame, maximum int) int {
@@ -95,10 +98,10 @@ func (c *Config) DrawAt(x, y int, str string) {
 	if c.boxed {
 		height += 2 // add box padding
 	}
-	if x < 0 && y < 0 {
+	if (x < 0 && y < 0) || c.analog {
 		// center
 		x = c.ap.W/2 + width/2
-		y = c.ap.H/2 + height/2 + 1
+		y = c.ap.H/2 + height/2
 	}
 	if c.topRight {
 		x = c.ap.W - 1
@@ -127,7 +130,14 @@ func (c *Config) DrawAt(x, y int, str string) {
 		if radius <= height { // so something is visible
 			radius = (2 * (height + 1)) / 2
 		}
-		c.ap.DiscBlendFN(x-width/2-1, y-height/2-1, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
+		cx := x - width/2 - 1
+		cy := y - height/2 - 1
+		if c.analog {
+			radius = min(c.ap.W/2, c.ap.H) - 1
+			c.DrawHands(cx, cy, radius, c.ap.Background, c.now, c.seconds)
+			return
+		}
+		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -230,6 +240,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"pass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
+	fAnalog := flag.Bool("analog", false, "Analog clock with hours, minutes and seconds hands")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
@@ -271,6 +282,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		bounceSpeed:        *fBounce,
 		blinkEnabled:       !*fNoBlink,
 		extraNewLinesAtEnd: true,
+		analog:             *fAnalog,
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	ap.TrueColor = *fTrueColor
@@ -292,22 +304,22 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	if showText {
 		cfg.text = *fText
 	}
-	now := time.Now()
+	cfg.now = time.Now()
 	if *fCountdown > 0 {
 		cfg.countDown = true
-		cfg.end = now.Add(*fCountdown)
+		cfg.end = cfg.now.Add(*fCountdown)
 	}
 	if *fUntil != "" {
 		cfg.countDown = true
 		var err error
-		cfg.end, err = duration.ParseDateTime(now, *fUntil)
+		cfg.end, err = duration.ParseDateTime(cfg.now, *fUntil)
 		if err != nil {
 			return log.FErrf("Invalid until time: %v", err)
 		}
 	}
 	if cfg.countDown && showText && cfg.text == "" {
 		toStr := cfg.end.Format(cfg.format)
-		if cfg.end.Sub(now) >= 24*time.Hour {
+		if cfg.end.Sub(cfg.now) >= 24*time.Hour {
 			toStr = fmt.Sprintf("%s %s", cfg.end.Format("2006-01-02"), toStr)
 		}
 		extra := ""
@@ -399,15 +411,15 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		}
 		cfg.ClearScreen()
 	}
-	if (cfg.bounceSpeed <= 0) && !cfg.topRight {
+	if (cfg.bounceSpeed <= 0) && !cfg.topRight && !cfg.analog {
 		ap.MouseTrackingOn()
 		cfg.trackMouse = true
 	}
-	return RawModeLoop(now, cfg)
+	return RawModeLoop(cfg)
 }
 
 //nolint:gocognit // yeah
-func RawModeLoop(now time.Time, cfg *Config) int {
+func RawModeLoop(cfg *Config) int {
 	var numStr string
 	ap := cfg.ap
 	var buf [4096]byte
@@ -431,7 +443,7 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
 			if cfg.countDown {
-				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", now.Format(cfg.format))
+				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", cfg.now.Format(cfg.format))
 				return 1
 			}
 			return 0
@@ -441,28 +453,28 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 			cfg.trackMouse = !cfg.trackMouse
 		}
 		doDraw := cfg.breath
-		now := time.Now()
+		cfg.now = time.Now()
 		if cfg.countDown {
-			left := cfg.end.Sub(now).Round(time.Second)
+			left := cfg.end.Sub(cfg.now).Round(time.Second)
 			if left < 0 {
-				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(cfg.format))
+				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", cfg.now.Format(cfg.format))
 				cfg.extraNewLinesAtEnd = false
 				return 0
 			}
 			numStr = DurationString(left, cfg.seconds)
 		} else {
-			numStr = now.Format(cfg.format)
+			numStr = cfg.now.Format(cfg.format)
 		}
 		if numStr != prev {
 			doDraw = true
 		}
 		prev = numStr
-		now = now.Truncate(time.Second) // change only when seconds change
-		if now != prevNow && cfg.blinkEnabled {
+		cfg.now = cfg.now.Truncate(time.Second) // change only when seconds change
+		if cfg.now != prevNow && cfg.blinkEnabled {
 			blink = !blink
 			doDraw = true
 		}
-		prevNow = now
+		prevNow = cfg.now
 		switch {
 		case (cfg.bounceSpeed > 0):
 			if frame%cfg.bounceSpeed == 0 {
