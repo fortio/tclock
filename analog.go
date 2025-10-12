@@ -12,6 +12,8 @@ type Point [2]int
 
 type Pixels map[Point]tcolor.RGBColor
 
+// Same as ansipixels.DrawLine but without the image and collecting pixels instead
+// (and handling the 1/2 height of terminal characters).
 func drawLine(pix Pixels, sx, sy, x0i, y0i int, color tcolor.RGBColor) {
 	x1i := x0i + sx
 	y0i *= 2
@@ -99,7 +101,7 @@ func angleCoords(maxV, timeValue float64, radius float64) (int, int) {
 func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now time.Time) {
 	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	r := float64(radius)
-	sx, sy := angleCoords(60, sec, .86*r)
+	sx, sy := angleCoords(60, sec, .9*r)
 	mx, my := angleCoords(60, minute+sec/60., .80*r)
 	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .47*r)
 	pix := make(Pixels)
@@ -117,7 +119,7 @@ func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now t
 			}
 			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "%d", m)
 		} else {
-			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "·")
+			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "•") // middle dot.
 		}
 	}
 }
