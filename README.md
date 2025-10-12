@@ -129,4 +129,8 @@ TZ=America/New_York tclock
 # Tail a file while also showing the clock (non raw mode)
 tclock - < /var/log/system.log
 (sleep 2; echo foo; sleep 1; echo bar) | tclock -
+# Analog mode
+tclock -analog
+# Analog without seconds (and no second dots)
+tclock -analog -no-seconds
 ```
