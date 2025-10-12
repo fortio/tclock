@@ -99,7 +99,7 @@ func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 	if x < 0 && y < 0 {
 		// center
 		x = c.ap.W/2 + width/2
-		y = c.ap.H/2 + height/2 + 1
+		y = c.ap.H/2 + height/2
 	}
 	if c.topRight {
 		x = c.ap.W - 1
@@ -283,10 +283,10 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	}
 	colorDisc := *fColorDisc
 	if cfg.analog {
-		cfg.aliasing /= 2 // sharper inside for hands.
-		cfg.radius *= 1.5 // bigger radius for analog
+		cfg.aliasing /= 2  // sharper inside for hands.
+		cfg.radius *= 1.25 // bigger radius for analog
 		if colorDisc == discDefault {
-			colorDisc = "#C8C8C8" // gray scale face for analog by default
+			colorDisc = "#808080" // gray scale face for analog by default
 		}
 	}
 	ap := ansipixels.NewAnsiPixels(60)

@@ -99,13 +99,13 @@ func angleCoords(maxV, timeValue float64, radius float64) (int, int) {
 func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now time.Time) {
 	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	r := float64(radius)
-	sx, sy := angleCoords(60, sec, .85*r)
-	mx, my := angleCoords(60, minute+sec/60., .8*r)
-	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .5*r)
+	sx, sy := angleCoords(60, sec, .86*r)
+	mx, my := angleCoords(60, minute+sec/60., .80*r)
+	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .47*r)
 	pix := make(Pixels)
-	drawLine(pix, sx, sy, cx, cy, tcolor.RGBColor{R: 0x65, G: 0xb3, B: 0x37}) // #65B337
+	drawLine(pix, sx, sy, cx, cy, tcolor.RGBColor{R: 0x50, G: 0x80, B: 0x50})
 	drawLine(pix, mx, my, cx, cy, tcolor.RGBColor{R: 0x2C, G: 0x59, B: 0xD4}) // #2C59D4
-	drawLine(pix, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0x18, B: 10})
+	drawLine(pix, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0xA7, B: 10})
 	drawPixels(c.ap, pix, background)
 	c.ap.WriteString(tcolor.Reset)
 }
