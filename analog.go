@@ -4,18 +4,18 @@ import (
 	"math"
 	"time"
 
-	"fortio.org/sets"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
 )
 
 type Point [2]int
 
-func drawLine(ap *ansipixels.AnsiPixels, sx, sy, x0i, y0i int, color, background tcolor.RGBColor) {
+type Pixels map[Point]tcolor.RGBColor
+
+func drawLine(pix Pixels, sx, sy, x0i, y0i int, color tcolor.RGBColor) {
 	x1i := x0i + sx
 	y0i *= 2
 	y1i := y0i + sy
-	pix := sets.New[Point]()
 
 	steep := math.Abs(float64(y1i-y0i)) > math.Abs(float64(x1i-x0i))
 	if steep {
@@ -39,9 +39,9 @@ func drawLine(ap *ansipixels.AnsiPixels, sx, sy, x0i, y0i int, color, background
 	y := y0i
 	for x := x0i; x <= x1i; x++ {
 		if steep {
-			pix.Add(Point{y, x})
+			pix[Point{y, x}] = color
 		} else {
-			pix.Add(Point{x, y})
+			pix[Point{x, y}] = color
 		}
 		err -= dy
 		if err < 0 {
@@ -49,28 +49,35 @@ func drawLine(ap *ansipixels.AnsiPixels, sx, sy, x0i, y0i int, color, background
 			err += float64(dx)
 		}
 	}
-	drawPixels(ap, pix, color, background)
 }
 
-func drawPixels(ap *ansipixels.AnsiPixels, pixels sets.Set[Point], color, background tcolor.RGBColor) {
-	ap.WriteString(color.Foreground())
-	ap.WriteString(background.Background())
-	for coordAry := range pixels {
+func drawPixels(ap *ansipixels.AnsiPixels, pixels Pixels, background tcolor.RGBColor) {
+	for coordAry, color := range pixels {
 		x, y := coordAry[0], coordAry[1]
 		switch y % 2 {
 		case 0:
 			ap.MoveCursor(x, y/2)
 			lower := Point{x, y + 1}
-			if pixels.Has(lower) {
-				ap.WriteRune(ansipixels.FullPixel)
-				pixels.Remove(lower)
+			if v, ok := pixels[lower]; ok {
+				if v == color {
+					ap.WriteString(color.Foreground())
+					ap.WriteRune(ansipixels.FullPixel)
+					continue
+				}
+				ap.WriteString(v.Foreground())
+				ap.WriteString(color.Background())
+				delete(pixels, lower) // drawn together
 			} else {
-				ap.WriteRune(ansipixels.TopHalfPixel)
+				ap.WriteString(color.Background())
+				ap.WriteString(background.Foreground())
 			}
+			ap.WriteRune(ansipixels.BottomHalfPixel)
 		case 1:
 			upper := Point{x, y - 1}
-			if !pixels.Has(upper) {
+			if _, ok := pixels[upper]; !ok {
 				ap.MoveCursor(x, y/2)
+				ap.WriteString(background.Background())
+				ap.WriteString(color.Foreground())
 				ap.WriteRune(ansipixels.BottomHalfPixel)
 			}
 		}
@@ -95,8 +102,10 @@ func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now t
 	sx, sy := angleCoords(60, sec, .85*r)
 	mx, my := angleCoords(60, minute+sec/60., .8*r)
 	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .5*r)
-	drawLine(c.ap, sx, sy, cx, cy, tcolor.RGBColor{R: 0x65, G: 0xb3, B: 0x37}, background) // #65B337
-	drawLine(c.ap, mx, my, cx, cy, tcolor.RGBColor{R: 0x2C, G: 0x59, B: 0xD4}, background) // #2C59D4
-	drawLine(c.ap, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0x18, B: 10}, background)
+	pix := make(Pixels)
+	drawLine(pix, sx, sy, cx, cy, tcolor.RGBColor{R: 0x65, G: 0xb3, B: 0x37}) // #65B337
+	drawLine(pix, mx, my, cx, cy, tcolor.RGBColor{R: 0x2C, G: 0x59, B: 0xD4}) // #2C59D4
+	drawLine(pix, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0x18, B: 10})
+	drawPixels(c.ap, pix, background)
 	c.ap.WriteString(tcolor.Reset)
 }
