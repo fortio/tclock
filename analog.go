@@ -98,14 +98,16 @@ func angleCoords(maxV, timeValue float64, radius float64) (int, int) {
 	return rotateFrom12(calculateAngle(maxV, timeValue), radius)
 }
 
-func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now time.Time) {
+func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now time.Time, seconds bool) {
 	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	r := float64(radius)
 	sx, sy := angleCoords(60, sec, .9*r)
 	mx, my := angleCoords(60, minute+sec/60., .80*r)
 	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .47*r)
 	pix := make(Pixels)
-	drawLine(pix, sx, sy, cx, cy, tcolor.RGBColor{R: 0x50, G: 0x80, B: 0x50})
+	if seconds {
+		drawLine(pix, sx, sy, cx, cy, tcolor.RGBColor{R: 0x50, G: 0x80, B: 0x50})
+	}
 	drawLine(pix, mx, my, cx, cy, tcolor.RGBColor{R: 0x2C, G: 0x59, B: 0xD4}) // #2C59D4
 	drawLine(pix, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0xA7, B: 10})
 	drawPixels(c.ap, pix, background)
@@ -118,7 +120,7 @@ func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now t
 				nx--
 			}
 			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "%d", m)
-		} else {
+		} else if seconds {
 			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "•") // middle dot.
 		}
 	}

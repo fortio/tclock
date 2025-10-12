@@ -134,7 +134,7 @@ func (c *Config) DrawAt(x, y int, str string) {
 		cy := y - height/2 - 1
 		if c.analog {
 			radius = min(c.ap.W/2, c.ap.H) - 1
-			c.DrawHands(cx, cy, radius, c.ap.Background, c.now)
+			c.DrawHands(cx, cy, radius, c.ap.Background, c.now, c.seconds)
 			return
 		}
 		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
@@ -240,7 +240,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"pass only flags will display current time; move mouse and click to place on screen"
 	fBounce := flag.Int("bounce", 0, "Bounce speed (0 is no bounce and normal mouse mode); 1 is fastest, 2 is slower, etc.")
 	f24 := flag.Bool("24", false, "Use 24-hour time format")
-	fAnalog := flag.Bool("analog", false, "use clock with minute and seconds and hours hands")
+	fAnalog := flag.Bool("analog", false, "Analog clock with hours, minutes and seconds hands")
 	fNoSeconds := flag.Bool("no-seconds", false, "Don't show seconds")
 	fNoBlink := flag.Bool("no-blink", false, "Don't blink the colon")
 	fBox := flag.Bool("box", false, "Draw a simple rounded corner outline around the time")
