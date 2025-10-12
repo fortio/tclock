@@ -102,8 +102,9 @@ func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now t
 	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	r := float64(radius)
 	sx, sy := angleCoords(60, sec, .9*r)
-	mx, my := angleCoords(60, minute+sec/60., .80*r)
-	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .47*r)
+	m := minute + sec/60.
+	mx, my := angleCoords(60, m, .80*r)
+	hx, hy := angleCoords(12, float64(hour%12)+m/60., .47*r)
 	pix := make(Pixels)
 	if seconds {
 		drawLine(pix, sx, sy, cx, cy, tcolor.RGBColor{R: 0x50, G: 0x80, B: 0x50})
