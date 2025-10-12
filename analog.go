@@ -54,7 +54,7 @@ func drawLine(pix Pixels, sx, sy, x0i, y0i int, color tcolor.RGBColor) {
 }
 
 // ColorState remembers last set foreground/background colors.
-// TODO: move this into ansipixels (optimize settiung fg/bg only when needed).
+// TODO: move this into ansipixels (optimize setting fg/bg only when needed).
 type ColorState struct {
 	fg, bg tcolor.RGBColor
 }
