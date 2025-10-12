@@ -81,22 +81,22 @@ func rotateFrom12(theta, radius float64) (int, int) {
 	return int(math.Round(-math.Sin(theta) * radius)), int(math.Round(-math.Cos(theta) * radius))
 }
 
-func calculateAngle(maxV, timeValue int) float64 {
-	return 2. * math.Pi * (float64(maxV) - float64(timeValue)) / float64(maxV)
+func calculateAngle(maxV, timeValue float64) float64 {
+	return 2. * math.Pi * (maxV - timeValue) / maxV
 }
 
-func angleCoords(maxV, timeValue int, radius float64) (int, int) {
+func angleCoords(maxV, timeValue float64, radius float64) (int, int) {
 	return rotateFrom12(calculateAngle(maxV, timeValue), radius)
 }
 
 func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now time.Time) {
-	sec, minute, hour := now.Second(), now.Minute(), now.Hour()
+	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	r := float64(radius)
-	sx, sy := angleCoords(60, sec, .8*r)
-	mx, my := angleCoords(60, minute, .7*r)
-	hx, hy := angleCoords(12, hour%12, .4*r)
-	drawLine(c.ap, sx, sy, cx, cy, tcolor.RGBColor{R: 0, G: 0, B: 255}, background)
-	drawLine(c.ap, mx, my, cx, cy, tcolor.RGBColor{R: 0, G: 255, B: 0}, background)
-	drawLine(c.ap, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0, B: 0}, background)
+	sx, sy := angleCoords(60, sec, .85*r)
+	mx, my := angleCoords(60, minute+sec/60., .8*r)
+	hx, hy := angleCoords(12, float64(hour%12)+minute/60., .5*r)
+	drawLine(c.ap, sx, sy, cx, cy, tcolor.RGBColor{R: 0x65, G: 0xb3, B: 0x37}, background) // #65B337
+	drawLine(c.ap, mx, my, cx, cy, tcolor.RGBColor{R: 0x2C, G: 0x59, B: 0xD4}, background) // #2C59D4
+	drawLine(c.ap, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0x18, B: 10}, background)
 	c.ap.WriteString(tcolor.Reset)
 }

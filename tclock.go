@@ -281,14 +281,17 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		extraNewLinesAtEnd: true,
 		analog:             *fAnalog,
 	}
+	colorDisc := *fColorDisc
 	if cfg.analog {
 		cfg.aliasing /= 2 // sharper inside for hands.
 		cfg.radius *= 1.5 // bigger radius for analog
+		if colorDisc == discDefault {
+			colorDisc = "#C8C8C8" // gray scale face for analog by default
+		}
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	ap.TrueColor = *fTrueColor
 	cfg.ap = ap
-	colorDisc := *fColorDisc
 	if ap.TrueColor != truecolorDefault && colorDisc == discDefault {
 		// If we auto detected a change in true color mode, change the disc default too
 		// if it hasn't been set explicitly.
