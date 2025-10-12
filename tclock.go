@@ -65,6 +65,8 @@ type Config struct {
 	blinkEnabled bool
 	// Show seconds
 	seconds bool
+	// for analog, current time
+	now time.Time
 }
 
 func bounce(frame, maximum int) int {
@@ -81,7 +83,7 @@ func (c *Config) breathColor() tcolor.Color {
 	return c.blendingFunction(c.ap.Background, c.bcolor, alpha).Color()
 }
 
-func (c *Config) DrawAt(x, y int, str string, now time.Time) {
+func (c *Config) DrawAt(x, y int, str string) {
 	if c.debug {
 		c.ap.DrawSquareBox(0, 0, c.ap.W, c.ap.H)
 		c.ap.WriteAt(0, c.ap.H-1, "Mouse %d, %d [%dx%d]", c.ap.Mx, c.ap.My, c.ap.W, c.ap.H)
@@ -96,7 +98,7 @@ func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 	if c.boxed {
 		height += 2 // add box padding
 	}
-	if x < 0 && y < 0 {
+	if (x < 0 && y < 0) || c.analog {
 		// center
 		x = c.ap.W/2 + width/2
 		y = c.ap.H/2 + height/2
@@ -130,11 +132,12 @@ func (c *Config) DrawAt(x, y int, str string, now time.Time) {
 		}
 		cx := x - width/2 - 1
 		cy := y - height/2 - 1
-		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 		if c.analog {
-			c.DrawHands(cx, cy, radius, c.colorDisc, now)
+			radius = min(c.ap.W/2, c.ap.H) - 1
+			c.DrawHands(cx, cy, radius, c.ap.Background, c.now)
 			return
 		}
+		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 	}
 	if c.boxed {
 		if c.colorBox != "" {
@@ -281,17 +284,10 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		extraNewLinesAtEnd: true,
 		analog:             *fAnalog,
 	}
-	colorDisc := *fColorDisc
-	if cfg.analog {
-		cfg.aliasing /= 2  // sharper inside for hands.
-		cfg.radius *= 1.25 // bigger radius for analog
-		if colorDisc == discDefault {
-			colorDisc = "#808080" // gray scale face for analog by default
-		}
-	}
 	ap := ansipixels.NewAnsiPixels(60)
 	ap.TrueColor = *fTrueColor
 	cfg.ap = ap
+	colorDisc := *fColorDisc
 	if ap.TrueColor != truecolorDefault && colorDisc == discDefault {
 		// If we auto detected a change in true color mode, change the disc default too
 		// if it hasn't been set explicitly.
@@ -308,22 +304,22 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	if showText {
 		cfg.text = *fText
 	}
-	now := time.Now()
+	cfg.now = time.Now()
 	if *fCountdown > 0 {
 		cfg.countDown = true
-		cfg.end = now.Add(*fCountdown)
+		cfg.end = cfg.now.Add(*fCountdown)
 	}
 	if *fUntil != "" {
 		cfg.countDown = true
 		var err error
-		cfg.end, err = duration.ParseDateTime(now, *fUntil)
+		cfg.end, err = duration.ParseDateTime(cfg.now, *fUntil)
 		if err != nil {
 			return log.FErrf("Invalid until time: %v", err)
 		}
 	}
 	if cfg.countDown && showText && cfg.text == "" {
 		toStr := cfg.end.Format(cfg.format)
-		if cfg.end.Sub(now) >= 24*time.Hour {
+		if cfg.end.Sub(cfg.now) >= 24*time.Hour {
 			toStr = fmt.Sprintf("%s %s", cfg.end.Format("2006-01-02"), toStr)
 		}
 		extra := ""
@@ -415,15 +411,15 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		}
 		cfg.ClearScreen()
 	}
-	if (cfg.bounceSpeed <= 0) && !cfg.topRight {
+	if (cfg.bounceSpeed <= 0) && !cfg.topRight && !cfg.analog {
 		ap.MouseTrackingOn()
 		cfg.trackMouse = true
 	}
-	return RawModeLoop(now, cfg)
+	return RawModeLoop(cfg)
 }
 
 //nolint:gocognit // yeah
-func RawModeLoop(now time.Time, cfg *Config) int {
+func RawModeLoop(cfg *Config) int {
 	var numStr string
 	ap := cfg.ap
 	var buf [4096]byte
@@ -436,7 +432,7 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 	prev := ""
 	ap.OnResize = func() error {
 		cfg.ClearScreen()
-		cfg.DrawAt(-1, -1, TimeString(prev, false), now)
+		cfg.DrawAt(-1, -1, TimeString(prev, false))
 		return nil
 	}
 	for {
@@ -447,7 +443,7 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
 			if cfg.countDown {
-				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", now.Format(cfg.format))
+				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", cfg.now.Format(cfg.format))
 				return 1
 			}
 			return 0
@@ -457,28 +453,28 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 			cfg.trackMouse = !cfg.trackMouse
 		}
 		doDraw := cfg.breath
-		now := time.Now()
+		cfg.now = time.Now()
 		if cfg.countDown {
-			left := cfg.end.Sub(now).Round(time.Second)
+			left := cfg.end.Sub(cfg.now).Round(time.Second)
 			if left < 0 {
-				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", now.Format(cfg.format))
+				ap.WriteAt(0, ap.H-2, "\aTime's up reached at %s\r\n", cfg.now.Format(cfg.format))
 				cfg.extraNewLinesAtEnd = false
 				return 0
 			}
 			numStr = DurationString(left, cfg.seconds)
 		} else {
-			numStr = now.Format(cfg.format)
+			numStr = cfg.now.Format(cfg.format)
 		}
 		if numStr != prev {
 			doDraw = true
 		}
 		prev = numStr
-		now = now.Truncate(time.Second) // change only when seconds change
-		if now != prevNow && cfg.blinkEnabled {
+		cfg.now = cfg.now.Truncate(time.Second) // change only when seconds change
+		if cfg.now != prevNow && cfg.blinkEnabled {
 			blink = !blink
 			doDraw = true
 		}
-		prevNow = now
+		prevNow = cfg.now
 		switch {
 		case (cfg.bounceSpeed > 0):
 			if frame%cfg.bounceSpeed == 0 {
@@ -509,7 +505,7 @@ func RawModeLoop(now time.Time, cfg *Config) int {
 			}
 			// -1 to switch to ansipixels 0,0 origin (from 1,1 terminal origin)
 			// also means 0,0 is now -1,-1 and will center the time until the mouse is moved.
-			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink), now)
+			cfg.DrawAt(x-1, y-1, TimeString(numStr, blink))
 			ap.RestoreCursorPos()
 			ap.EndSyncMode()
 		}

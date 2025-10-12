@@ -108,4 +108,16 @@ func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now t
 	drawLine(pix, hx, hy, cx, cy, tcolor.RGBColor{R: 255, G: 0xA7, B: 10})
 	drawPixels(c.ap, pix, background)
 	c.ap.WriteString(tcolor.Reset)
+	for n := 1; n <= 60; n++ {
+		nx, ny := angleCoords(60, float64(n%60), r)
+		if n%5 == 0 {
+			m := n / 5
+			if m >= 10 {
+				nx--
+			}
+			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "%d", m)
+		} else {
+			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "·")
+		}
+	}
 }
