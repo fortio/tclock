@@ -53,7 +53,33 @@ func drawLine(pix Pixels, sx, sy, x0i, y0i int, color tcolor.RGBColor) {
 	}
 }
 
+// ColorState remembers last set foreground/background colors.
+// TODO: move this into ansipixels (optimize setting fg/bg only when needed).
+type ColorState struct {
+	fg, bg tcolor.RGBColor
+}
+
+func (cs *ColorState) SetFG(ap *ansipixels.AnsiPixels, c tcolor.RGBColor) {
+	if cs.fg != c {
+		cs.fg = c
+		ap.WriteString(c.Foreground())
+	}
+}
+
+func (cs *ColorState) SetBG(ap *ansipixels.AnsiPixels, c tcolor.RGBColor) {
+	if cs.bg != c {
+		cs.bg = c
+		ap.WriteString(c.Background())
+	}
+}
+
+func (cs *ColorState) SetColors(ap *ansipixels.AnsiPixels, fg, bg tcolor.RGBColor) {
+	cs.SetFG(ap, fg)
+	cs.SetBG(ap, bg)
+}
+
 func drawPixels(ap *ansipixels.AnsiPixels, pixels Pixels, background tcolor.RGBColor) {
+	cs := ColorState{}
 	for coordAry, color := range pixels {
 		x, y := coordAry[0], coordAry[1]
 		switch y % 2 {
@@ -62,24 +88,21 @@ func drawPixels(ap *ansipixels.AnsiPixels, pixels Pixels, background tcolor.RGBC
 			lower := Point{x, y + 1}
 			if v, ok := pixels[lower]; ok {
 				if v == color {
-					ap.WriteString(color.Foreground())
+					cs.SetColors(ap, color, color)
 					ap.WriteRune(ansipixels.FullPixel)
 					continue
 				}
-				ap.WriteString(v.Foreground())
-				ap.WriteString(color.Background())
+				cs.SetColors(ap, v, color)
 				delete(pixels, lower) // drawn together
 			} else {
-				ap.WriteString(color.Background())
-				ap.WriteString(background.Foreground())
+				cs.SetColors(ap, background, color)
 			}
 			ap.WriteRune(ansipixels.BottomHalfPixel)
 		case 1:
 			upper := Point{x, y - 1}
 			if _, ok := pixels[upper]; !ok {
 				ap.MoveCursor(x, y/2)
-				ap.WriteString(background.Background())
-				ap.WriteString(color.Foreground())
+				cs.SetColors(ap, color, background)
 				ap.WriteRune(ansipixels.BottomHalfPixel)
 			}
 		}
