@@ -434,7 +434,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	return RawModeLoop(cfg)
 }
 
-//nolint:gocognit // yeah
+//nolint:gocognit,funlen // yeah
 func RawModeLoop(cfg *Config) int {
 	var numStr string
 	ap := cfg.ap
