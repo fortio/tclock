@@ -69,7 +69,7 @@ type Config struct {
 	now time.Time
 	// antialiased image based analog clock
 	aa bool
-	// continous update at FPS instead of per second
+	// continuous update at FPS instead of per second
 	continuous bool
 }
 
@@ -274,6 +274,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"Tail the given `filename` while showing the clock, or `-` for stdin")
 	fAA := flag.Bool("aa", false, "Use antialiased image based analog clock")
 	fContinuous := flag.Bool("c", false, "Analog clock updates continuously instead of seconds ticks")
+	fFPS := flag.Float64("fps", 30, "Maximum frames per second (for -c)")
 	cli.Main()
 	format := "3:04"
 	if *f24 {
@@ -297,9 +298,9 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		continuous:         *fContinuous, // continuous
 	}
 	if cfg.continuous && !cfg.analog && !cfg.aa {
-		cfg.analog = true
+		cfg.aa = true
 	}
-	ap := ansipixels.NewAnsiPixels(60)
+	ap := ansipixels.NewAnsiPixels(*fFPS)
 	ap.TrueColor = *fTrueColor
 	cfg.ap = ap
 	colorDisc := *fColorDisc
