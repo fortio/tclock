@@ -16,7 +16,8 @@ There is also an analog version (`-analog`)
 And anti-aliased analog version (`-aa`)
 ![AA](screenshotAA.png)
 
-
+- Use `a` to toggle analog modes
+- Use `c` to switch to/from continuous vs discrete updates
 
 ## Install
 You can get the binary from [releases](https://github.com/fortio/tclock/releases)

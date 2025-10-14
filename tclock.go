@@ -69,6 +69,8 @@ type Config struct {
 	now time.Time
 	// antialiased image based analog clock
 	aa bool
+	// continous update at FPS instead of per second
+	continuous bool
 }
 
 func bounce(frame, maximum int) int {
@@ -271,6 +273,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 	fTail := flag.String("tail", "",
 		"Tail the given `filename` while showing the clock, or `-` for stdin")
 	fAA := flag.Bool("aa", false, "Use antialiased image based analog clock")
+	fContinuous := flag.Bool("c", false, "Analog clock updates continuously instead of seconds ticks")
 	cli.Main()
 	format := "3:04"
 	if *f24 {
@@ -291,6 +294,10 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		extraNewLinesAtEnd: true,
 		analog:             *fAnalog,
 		aa:                 *fAA,
+		continuous:         *fContinuous, // continuous
+	}
+	if cfg.continuous && !cfg.analog && !cfg.aa {
+		cfg.analog = true
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	ap.TrueColor = *fTrueColor
@@ -449,18 +456,27 @@ func RawModeLoop(cfg *Config) int {
 			return 1
 		}
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
-		if len(ap.Data) > 0 && (ap.Data[0] == 'q' || ap.Data[0] == 3) {
-			if cfg.countDown {
-				ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", cfg.now.Format(cfg.format))
-				return 1
+		if len(ap.Data) > 0 {
+			switch ap.Data[0] {
+			case 'q', 3:
+				if cfg.countDown {
+					ap.WriteAt(0, ap.H-3, "Countdown aborted at %s\r\n", cfg.now.Format(cfg.format))
+					return 1
+				}
+				return 0
+			case 'a', 'A':
+				cfg.aa = !cfg.aa
+				cfg.analog = !cfg.aa
+			case 'c', 'C':
+				cfg.continuous = !cfg.continuous
+			default:
 			}
-			return 0
 		}
 		// Click to place the time at the mouse position (or switch back to move with mouse).
 		if ap.LeftClick() && ap.MouseRelease() {
 			cfg.trackMouse = !cfg.trackMouse
 		}
-		doDraw := cfg.breath
+		doDraw := cfg.breath || cfg.continuous
 		cfg.now = time.Now()
 		if cfg.countDown {
 			left := cfg.end.Sub(cfg.now).Round(time.Second)
