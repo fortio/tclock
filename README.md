@@ -16,7 +16,9 @@ There is also an analog version (`-analog`)
 And anti-aliased analog version (`-aa`)
 ![AA](screenshotAA.png)
 
-
+- Use `a` to toggle analog modes
+- Use `c` to switch to/from continuous vs discrete updates
+- Use `q` or ctrl-c to quit (abort the countdown in countdown mode)
 
 ## Install
 You can get the binary from [releases](https://github.com/fortio/tclock/releases)
@@ -63,6 +65,8 @@ flags:
         Draw a simple rounded corner outline around the time
   -breath
         Pulse the color (only works for RGB)
+  -c
+        Analog clock updates continuously instead of seconds ticks
   -color string
         Color to use: RRGGBB, hue,sat,lum ([0,1]) or one of: none, black, red, green,
       yellow, orange, blue, purple, cyan, gray, darkgray, brightred, brightgreen, brightyellow,
@@ -141,4 +145,6 @@ tclock -analog
 tclock -analog -no-seconds
 # Analog using anti aliasing
 tclock -aa
+# Using continuous smooth updates
+tclock -c
 ```
