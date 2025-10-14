@@ -295,7 +295,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		extraNewLinesAtEnd: true,
 		analog:             *fAnalog,
 		aa:                 *fAA,
-		continuous:         *fContinuous, // continuous
+		continuous:         *fContinuous,
 	}
 	if cfg.continuous && !cfg.analog && !cfg.aa {
 		cfg.aa = true
