@@ -37,12 +37,12 @@ func (c *Config) DrawImage(now time.Time, seconds bool) {
 	if c.continuous {
 		sec = math.Mod(float64(now.UnixMicro())/1e6, 60)
 	}
-	sx, sy := coords(60, sec, .94*r)
+	sx, sy := coords(60, sec, .9*r)
 	m := minute + sec/60.
 	mx, my := coords(60, m, .80*r)
 	hx, hy := coords(12, float64(hour%12)+m/60., .47*r)
-	minDotColor := color.NRGBA{R: 255, G: 255, B: 255, A: 200}
-	hourDotColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
+	minDotColor := color.NRGBA{R: 255, G: 255, B: 255, A: 100}
+	hourDotColor := color.NRGBA{R: 255, G: 20, B: 20, A: 180}
 	if seconds {
 		// Minutes/Seconds markers:
 		for n := range 60 {
@@ -50,7 +50,7 @@ func (c *Config) DrawImage(now time.Time, seconds bool) {
 			if n%5 == 0 {
 				color = hourDotColor
 			}
-			nx1, ny1 := coords(60, float64(n), r-0.5)
+			nx1, ny1 := coords(60, float64(n), r-1.5)
 			nx2, ny2 := coords(60, float64(n), r+0.5)
 			ansipixels.DrawAALine(img, cxf+nx1, cyf+ny1, cxf+nx2, cyf+ny2, color)
 		}
