@@ -455,6 +455,7 @@ func RawModeLoop(cfg *Config) int {
 		if err != nil {
 			return 1
 		}
+		doDraw := cfg.breath || cfg.continuous
 		// Exit on 'q' or Ctrl-C but with status error in countdown mode.
 		if len(ap.Data) > 0 {
 			switch ap.Data[0] {
@@ -467,8 +468,10 @@ func RawModeLoop(cfg *Config) int {
 			case 'a', 'A':
 				cfg.aa = !cfg.aa
 				cfg.analog = !cfg.aa
+				doDraw = true
 			case 'c', 'C':
 				cfg.continuous = !cfg.continuous
+				doDraw = true
 			default:
 			}
 		}
@@ -476,7 +479,6 @@ func RawModeLoop(cfg *Config) int {
 		if ap.LeftClick() && ap.MouseRelease() {
 			cfg.trackMouse = !cfg.trackMouse
 		}
-		doDraw := cfg.breath || cfg.continuous
 		cfg.now = time.Now()
 		if cfg.countDown {
 			left := cfg.end.Sub(cfg.now).Round(time.Second)
