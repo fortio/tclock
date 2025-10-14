@@ -54,10 +54,10 @@ func (c *Config) DrawImage(now time.Time, seconds bool) {
 			nx2, ny2 := coords(60, float64(n), r+0.5)
 			ansipixels.DrawAALine(img, cxf+nx1, cyf+ny1, cxf+nx2, cyf+ny2, color)
 		}
-		ansipixels.DrawAALine(img, cxf, cyf, cxf+sx, cyf+sy, color.NRGBA{R: 0x50, G: 0x80, B: 0x50, A: 200})
+		ansipixels.DrawAALine(img, cxf, cyf, cxf+sx, cyf+sy, color.NRGBA{R: 0x50, G: 0x80, B: 0x50, A: 255})
 	}
-	ansipixels.DrawAALine(img, cxf, cyf, cxf+mx, cyf+my, color.NRGBA{R: 0x2C, G: 0x59, B: 0xD4, A: 200}) // #2C59D4
-	ansipixels.DrawAALine(img, cxf, cyf, cxf+hx, cyf+hy, color.NRGBA{R: 255, G: 0xA7, B: 10, A: 200})
+	ansipixels.DrawAALine(img, cxf, cyf, cxf+mx, cyf+my, color.NRGBA{R: 0x2C, G: 0x59, B: 0xD4, A: 255}) // #2C59D4
+	ansipixels.DrawAALine(img, cxf, cyf, cxf+hx, cyf+hy, color.NRGBA{R: 255, G: 0xA7, B: 10, A: 255})
 
 	// back to RGBA for drawing
 	dst := image.NewRGBA(img.Bounds())
