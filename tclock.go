@@ -496,7 +496,9 @@ func RawModeLoop(cfg *Config) int {
 			doDraw = true
 		}
 		prev = numStr
-		cfg.now = cfg.now.Truncate(time.Second) // change only when seconds change
+		if !cfg.continuous {
+			cfg.now = cfg.now.Truncate(time.Second) // change only when seconds change
+		}
 		if cfg.now != prevNow && cfg.blinkEnabled {
 			blink = !blink
 			doDraw = true

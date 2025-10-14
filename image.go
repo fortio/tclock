@@ -35,7 +35,7 @@ func (c *Config) DrawImage(now time.Time, seconds bool) {
 	img := image.NewNRGBA(image.Rect(0, 0, c.ap.W, 2*c.ap.H))
 	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	if c.continuous {
-		sec = math.Mod(float64(time.Now().UnixMicro())/1e6, 60)
+		sec = math.Mod(float64(now.UnixMicro())/1e6, 60)
 	}
 	sx, sy := coords(60, sec, .94*r)
 	m := minute + sec/60.

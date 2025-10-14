@@ -124,7 +124,7 @@ func angleCoords(maxV, timeValue float64, radius float64) (int, int) {
 func (c *Config) DrawHands(cx, cy, radius int, background tcolor.RGBColor, now time.Time, seconds bool) {
 	sec, minute, hour := float64(now.Second()), float64(now.Minute()), now.Hour()
 	if c.continuous {
-		sec = math.Mod(float64(time.Now().UnixMicro())/1e6, 60)
+		sec = math.Mod(float64(now.UnixMicro())/1e6, 60)
 	}
 	r := float64(radius)
 	sx, sy := angleCoords(60, sec, .9*r)
