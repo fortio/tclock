@@ -13,6 +13,10 @@ And now you can use it as replacement for `tail -f` with the clock ticking on to
 There is also an analog version (`-analog`)
 ![Analog](screenshotAnalog.png)
 
+And anti-aliased analog version (`-aa`)
+![AA](screenshotAA.png)
+
+
 
 ## Install
 You can get the binary from [releases](https://github.com/fortio/tclock/releases)
@@ -45,6 +49,8 @@ tclock help
 flags:
   -24
         Use 24-hour time format
+  -aa
+        Use antialiased image based analog clock
   -aliasing float
         Aliasing factor for the disc drawing (0.0 sharpest edge to 1.0 sphere effect) (default 0.8)
   -analog
@@ -133,4 +139,6 @@ tclock - < /var/log/system.log
 tclock -analog
 # Analog without seconds (and no second dots)
 tclock -analog -no-seconds
+# Analog using anti aliasing
+tclock -aa
 ```
