@@ -38,15 +38,18 @@ func (c *Config) DrawImage(now time.Time, seconds bool) {
 	m := minute + sec/60.
 	mx, my := coords(60, m, .80*r)
 	hx, hy := coords(12, float64(hour%12)+m/60., .47*r)
+	minDotColor := color.NRGBA{R: 255, G: 255, B: 255, A: 200}
+	hourDotColor := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
 	if seconds {
 		// Minutes/Seconds markers:
-		for n := 1; n < 60; n++ {
+		for n := range 60 {
+			color := minDotColor
 			if n%5 == 0 {
-				continue
+				color = hourDotColor
 			}
-			nx1, ny1 := coords(60, float64(n), r*.96)
-			nx2, ny2 := coords(60, float64(n), r*1.02)
-			ansipixels.DrawAALine(img, cxf+nx1, cyf+ny1, cxf+nx2, cyf+ny2, color.NRGBA{R: 255, G: 255, B: 255, A: 75})
+			nx1, ny1 := coords(60, float64(n), r-0.5)
+			nx2, ny2 := coords(60, float64(n), r+0.5)
+			ansipixels.DrawAALine(img, cxf+nx1, cyf+ny1, cxf+nx2, cyf+ny2, color)
 		}
 		ansipixels.DrawAALine(img, cxf, cyf, cxf+sx, cyf+sy, color.NRGBA{R: 0x50, G: 0x80, B: 0x50, A: 200})
 	}
@@ -58,15 +61,16 @@ func (c *Config) DrawImage(now time.Time, seconds bool) {
 	draw.Draw(dst, img.Bounds(), img, image.Point{}, draw.Src)
 	// draw the image at the center of the available space
 	_ = c.ap.ShowScaledImage(dst)
-
-	// Numbers for hours:
-	c.ap.WriteString(tcolor.Reset)
-	for n := 5; n <= 60; n += 5 {
-		nx, ny := angleCoords(60, float64(n%60), r)
-		m := n / 5
-		if m >= 10 {
-			nx--
+	if !seconds {
+		// Numbers for hours:
+		c.ap.WriteString(tcolor.Reset)
+		for n := 5; n <= 60; n += 5 {
+			nx, ny := angleCoords(60, float64(n%60), r)
+			m := n / 5
+			if m >= 10 {
+				nx--
+			}
+			c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "%d", m)
 		}
-		c.ap.WriteAt(cx+nx, cy+(ny-1)/2, "%d", m)
 	}
 }
