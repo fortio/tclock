@@ -67,6 +67,8 @@ type Config struct {
 	seconds bool
 	// for analog, current time
 	now time.Time
+	// antialiased image based analog clock
+	aa bool
 }
 
 func bounce(frame, maximum int) int {
@@ -84,6 +86,15 @@ func (c *Config) breathColor() tcolor.Color {
 }
 
 func (c *Config) DrawAt(x, y int, str string) {
+	if c.aa {
+		c.DrawImage(c.now, c.seconds)
+		return
+	}
+	if c.analog {
+		radius := min(c.ap.W/2, c.ap.H) - 1
+		c.DrawHands(c.ap.W/2, c.ap.H/2, radius, c.ap.Background, c.now, c.seconds)
+		return
+	}
 	if c.debug {
 		c.ap.DrawSquareBox(0, 0, c.ap.W, c.ap.H)
 		c.ap.WriteAt(0, c.ap.H-1, "Mouse %d, %d [%dx%d]", c.ap.Mx, c.ap.My, c.ap.W, c.ap.H)
@@ -132,11 +143,6 @@ func (c *Config) DrawAt(x, y int, str string) {
 		}
 		cx := x - width/2 - 1
 		cy := y - height/2 - 1
-		if c.analog {
-			radius = min(c.ap.W/2, c.ap.H) - 1
-			c.DrawHands(cx, cy, radius, c.ap.Background, c.now, c.seconds)
-			return
-		}
 		c.ap.DiscBlendFN(cx, cy, radius, c.ap.Background, c.colorDisc, c.aliasing, c.blendingFunction)
 	}
 	if c.boxed {
@@ -264,6 +270,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		"If set, countdown until this `date/time` (\"YYYY-MM-DD HH:MM:SS\" or for instance \"3:05 pm\") instead of showing the time")
 	fTail := flag.String("tail", "",
 		"Tail the given `filename` while showing the clock, or `-` for stdin")
+	fAA := flag.Bool("aa", false, "Use antialiased image based analog clock")
 	cli.Main()
 	format := "3:04"
 	if *f24 {
@@ -283,6 +290,7 @@ func Main() int { //nolint:funlen,gocognit,gocyclo,maintidx // we could split th
 		blinkEnabled:       !*fNoBlink,
 		extraNewLinesAtEnd: true,
 		analog:             *fAnalog,
+		aa:                 *fAA,
 	}
 	ap := ansipixels.NewAnsiPixels(60)
 	ap.TrueColor = *fTrueColor
