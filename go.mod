@@ -3,10 +3,10 @@ module fortio.org/tclock
 go 1.23.0
 
 require (
-	fortio.org/cli v1.12.2
+	fortio.org/cli v1.12.3
 	fortio.org/duration v1.0.4
-	fortio.org/log v1.18.1
-	fortio.org/terminal v0.60.2
+	fortio.org/log v1.18.3
+	fortio.org/terminal v0.60.3
 )
 
 require (
