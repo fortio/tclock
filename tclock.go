@@ -448,7 +448,9 @@ func RawModeLoop(cfg *Config) int {
 	prev := ""
 	ap.OnResize = func() error {
 		cfg.ClearScreen()
+		cfg.ap.StartSyncMode()
 		cfg.DrawAt(-1, -1, TimeString(prev, false))
+		cfg.ap.EndSyncMode()
 		return nil
 	}
 	for {
